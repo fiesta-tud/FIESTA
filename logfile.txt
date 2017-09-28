@@ -1,12 +1,54 @@
-11:36:38  Analysing frame 1
-11:36:38  START SCANNING
-11:36:38  create black&white image
-11:36:38  scan area 1
-11:36:38  scan area 2
-11:36:38  2 objects found
-11:36:38  start fine scan
-11:36:38  process cluster of 2 objects
-11:36:39  fit remaining intermediate points
-11:36:39  process object 1 with 1 points
-11:36:39  process object 2 with 1 points
-11:36:39  interpolate data between points
+16:26:25  Analysing frame 4537
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points
+16:26:25  Analysing frame 4538
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points
+16:26:25  Analysing frame 4539
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points
+16:26:25  Analysing frame 4540
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points
+16:26:25  Analysing frame 4541
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points
+16:26:25  Analysing frame 4542
+16:26:25  START SCANNING
+16:26:25  create black&white image
+16:26:25  scan area 1
+16:26:25  1 objects found
+16:26:25  start fine scan
+16:26:25  fit remaining intermediate points
+16:26:25  process object 1 with 1 points
+16:26:25  interpolate data between points

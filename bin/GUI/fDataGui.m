@@ -1363,7 +1363,7 @@ if strcmp(Type,'Molecule')==1
     lYaxis(2).data{n}=Object.Results(:,9);        
     lYaxis(2).units{n}='[nm]'; 
     n=n+1;
-    if strcmp(Object.Type,'streched')
+    if strcmp(Object.Type,'stretched')
         lYaxis(2).list{n}='width of major axis(FWHM)';
         lYaxis(2).data{n}=Object.Results(:,10);   
         lYaxis(2).units{n}='[nm]';        

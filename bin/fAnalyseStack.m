@@ -259,14 +259,14 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             Molecule(n).Results(j,8) = Objects{f}.height(1,m);                
             Molecule(n).Results(j,9) = single(sqrt((Objects{f}.com_x(2,m))^2+(Objects{f}.com_y(2,m))^2));                        
             if size(Objects{f}.data{m},2)==1
-                Molecule(n).Results(j,9:10) = Objects{f}.data{m}';                
-                Molecule(n).Results(j,11) = single(mod(Objects{f}.orientation(1,m),2*pi));                
+                Molecule(n).Results(j,10:11) = Objects{f}.data{m}';                
+                Molecule(n).Results(j,12) = single(Objects{f}.orientation(1,m));                
                 Molecule(n).Type = 'stretched';
-                Molecule(n).Results(j,12) = 0; 
+                Molecule(n).Results(j,13) = 0; 
             elseif size(Objects{f}.data{m},2)==3
-                Molecule(n).Results(j,9:11) = Objects{f}.data{m}(1,:);                
+                Molecule(n).Results(j,10:12) = Objects{f}.data{m}(1,:);                
                 Molecule(n).Type = 'ring1';
-                Molecule(n).Results(j,12) = 0; 
+                Molecule(n).Results(j,13) = 0; 
             else
                 Molecule(n).Type = 'symmetric';
                 Molecule(n).Results(j,10) = 0; 

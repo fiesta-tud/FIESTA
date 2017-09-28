@@ -26,8 +26,8 @@ function [ model, x0, dx, lb, ub ] = getParameter( model, data )
   
   % setup parameter array
   %    [ X  Y           A                   B                   C                   H                ]
-  x0 = [ c(1:2)         model.guess.w       0                   model.guess.w       model.guess.h    ];
-  dx = [ 1  1           model.guess.w/10    model.guess.w/10    model.guess.w/10    model.guess.h/10 ];
-  lb = [ 1  1           0                   -10*model.guess.w   0                   model.guess.h/10 ];
-  ub = [ data.rect(3:4) 10*model.guess.w    10*model.guess.w    10*model.guess.w    model.guess.h*10 ];
+  x0 = [ c(1:2)         model.guess.w       model.guess.w       0                   model.guess.h    ];
+  dx = [ 1  1           model.guess.w/10    model.guess.w/10    pi/100              model.guess.h/10 ];
+  lb = [ 1  1           0                   0                   -pi/2               model.guess.h/10 ];
+  ub = [ data.rect(3:4) 10*model.guess.w    10*model.guess.w    pi/2                model.guess.h*10 ];
 end
