@@ -71,7 +71,9 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
       case 'f'
         fit_model{i} = Model2DGaussPlus2Rings( guess(i) );        
       case 'n'        
-        fit_model{i} = ModelNeg2DGaussPlusRing( guess(i) );                
+        fit_model{i} = ModelNeg2DGaussPlusRing( guess(i) );       
+      case 'd'        
+        fit_model{i} = ModelDiatom( guess(i) );   
         
       % elongated objects
       case 'e'
@@ -271,7 +273,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
 %    surf( reshape( fit_pic - FitError( x ), data.rect([4 3])+1 ) );
 %    figure( 'Name', 'Estimate', 'NumberTitle', 'off' );
 %    surf( reshape( fit_pic - FitError( x0 ), data.rect([4 3])+1 ) );
-%    pause
+
 %  end
 
   % delete global vars to clean up

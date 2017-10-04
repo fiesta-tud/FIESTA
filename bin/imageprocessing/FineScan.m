@@ -275,6 +275,7 @@ function [objects,delete] = fitComplicatedParts( objects, params )
             guess(end).idx = 1;
             guess(end).x = double(objects(obj).p(1).x);
             guess(end).w = double(objects(obj).p(1).w);
+            guess(end).r = double(objects(obj).p(1).r);
         elseif numel( objects(obj).p ) == 2 % check, if it is a short filament
             guess(end).model = 't';
             guess(end).idx = 1;
@@ -370,7 +371,7 @@ function [objects,delete] = fitComplicatedParts( objects, params )
     % store results
     for obj = 1:numel( guess )
       switch guess(obj).model
-        case { 'p', 'b', 'r', 'e', 'm' } % single points
+        case { 'p', 'b', 'r', 'e', 'm','d' } % single points
           objects( guess(obj).obj ).p( guess(obj).idx ) = data(obj);
           if guess(obj).model == 'm' || (guess(obj).model == 'e' &&  guess(obj).idx == 1)
             objects( guess(obj).obj ).p( guess(obj).idx ).o = objects( guess(obj).obj ).p( guess(obj).idx ).o - pi;

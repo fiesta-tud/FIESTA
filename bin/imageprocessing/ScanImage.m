@@ -129,6 +129,8 @@ function params = CheckParameters( params )
     params.bead_model_char = 'r';
   elseif strcmp( params.bead_model, 'GaussPlus2Rings' )
     params.bead_model_char = 'f';    
+  elseif strcmp( params.bead_model, 'Diatom' )
+    params.bead_model_char = 'd';    
   else
     error( 'MPICBG:FIESTA:unknownModel', 'The bead model "%s" is unknown', params.bead_model );
   end

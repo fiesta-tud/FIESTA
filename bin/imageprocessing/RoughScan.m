@@ -217,6 +217,12 @@ function objects = FindPointObjects( region_stats, params )
     objects(1).p(1).x = region_stats(1).Centroid;    
     objects(1).p(1).w = 2.77258872223978 / params.fwhm_estimate^2;
     objects(1).p(1).b = NaN;
+    if params.max_beads_per_region == 0
+      objects(1).p(1).r = params.fwhm_estimate;
+      addstats = regionprops(region_stats(1).Image,'Orientation');
+      objects(1).p(1).o = addstats.Orientation;
+      objects(1).p(1).h = mean(sub_pic(pic_max));
+    end
   end
 
 end

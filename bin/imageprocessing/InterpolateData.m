@@ -54,6 +54,11 @@ function objects = InterpolateData( obj, img, params )
         data = single([obj(obj_id).p(1).r(1).value*params.scale obj(obj_id).p(1).w(1).value*params.scale obj(obj_id).p(1).h(1).value;...
                        obj(obj_id).p(1).r(2).value*params.scale obj(obj_id).p(1).w(2).value*params.scale obj(obj_id).p(1).h(2).value]);
         data(1,:) = [];
+      elseif numel( obj(obj_id).p(1).w ) == 2 && numel( obj(obj_id).p(1).r ) == 2
+        %diatom
+        width = single( [ mean( [obj(obj_id).p(1).w(1).value obj(obj_id).p(1).w(2).value] ); mean( [obj(obj_id).p(1).w(1).error obj(obj_id).p(1).w(2).error] ) ] * params.scale );
+        data = single([obj(obj_id).p(1).w(1).value obj(obj_id).p(1).w(2).value; obj(obj_id).p(1).r(1).value obj(obj_id).p(1).r(2).value] * params.scale );
+        objects.orientation(:,obj_id) = single( [ obj(obj_id).p(1).o(1).value; obj(obj_id).p(1).o(1).error ] );
       else
         width = single( [obj(obj_id).p(1).w(1).value; obj(obj_id).p(1).w(1).error] * params.scale );
         data = [];

@@ -521,8 +521,8 @@ hConfigGui.pMolecules.eParams = uicontrol('Parent',hConfigGui.pMolecules.pModel,
 %define available models
 str={'Symmetric 2D-Gaussian',...
      'Stretched 2D-Gaussian',...
-     'Symmetric 2D-Gaussian plus Gaussian Ring'}; %,...
-%     'Symmetric 2D-Gaussian plus two opposing Gaussian Rings'};
+     'Symmetric 2D-Gaussian plus Gaussian Ring',...
+     'Diatom (use 0 for max functions)'};
 
 hConfigGui.pMolecules.mModel = uicontrol('Parent',hConfigGui.pMolecules.pModel,'Style','popupmenu','Units','normalized',...
                                           'Position',[.025 .8 .55 .075],'Tag','rSymmetricGauss','Fontsize',12,'String',str,...
@@ -1070,7 +1070,7 @@ if tempConfig.ConnectMol.MaxAngle<=0||isnan(tempConfig.ConnectMol.MaxAngle)
 end
 
 tempConfig.MaxFunc=str2double(get(hConfigGui.pMolecules.eMaxFunc,'String'));
-if tempConfig.MaxFunc<=0||isnan(tempConfig.MaxFunc)
+if tempConfig.MaxFunc<0||isnan(tempConfig.MaxFunc)
     err{length(err)+1}='Wrong maximum function input for molecules';
 end
 
@@ -1087,7 +1087,7 @@ switch(get(hConfigGui.pMolecules.mModel,'Value'))
     case 3
         tempConfig.Model='GaussPlusRing';
     case 4
-        tempConfig.Model='GaussPlus2Rings';
+        tempConfig.Model='Diatom';
 end
 
 tempConfig.ConnectFil.MaxVelocity=str2double(get(hConfigGui.pFilaments.eMaxVelocity,'String'));
@@ -1170,7 +1170,7 @@ end
 
 tempConfig.FilFocus=get(hConfigGui.pExperimental.cFocus,'Value');
 
-if get(hConfigGui.pExperimental.cCurvedFil,'Value');
+if get(hConfigGui.pExperimental.cCurvedFil,'Value')
     tempConfig.ReduceFitBox=str2double(get(hConfigGui.pExperimental.eReduceFitBox,'String'))/100;
     if tempConfig.ReduceFitBox<0.25||tempConfig.ReduceFitBox>1||isnan(tempConfig.ReduceFitBox)
         err{length(err)+1}='Wrong fit box reduction for curved filaments';
@@ -1241,8 +1241,10 @@ openhelp(sprintf('content\\GUI\\Configuration\\%s',get(gco,'UserData')));
 function UpdateParams(hConfigGui)
 n=round(str2double(get(hConfigGui.pMolecules.eMaxFunc,'String')));
 set(hConfigGui.pMolecules.eMaxFunc,'String',num2str(n));
-if n>0
+if n>=0
     switch(get(hConfigGui.pMolecules.mModel,'Value'))
+        case 0 
+            params=8;
         case 1
             params=n*4;
         case 2
@@ -1250,7 +1252,7 @@ if n>0
         case 3
             params=n*7;                 
         case 4
-            params=n*10;            
+            params=8;            
     end
     set(hConfigGui.pMolecules.eParams,'String',num2str(params));
     if params>20
@@ -1267,7 +1269,7 @@ function ShowModel(hConfigGui)
 set(gcf, 'Renderer', 'painters')
 n=str2double(get(hConfigGui.pMolecules.eMaxFunc,'String'));
 [X,Y] = meshgrid(-10:1:10);
-if n>0
+if n>=0
     label=[];
     label2=[];
     label{1}='\(h\) ... Height of Peak';                        
@@ -1292,15 +1294,11 @@ if n>0
             equation='\(I(x,y) = \frac{h}{2\pi\sigma^2} \cdot \exp \left[-\frac{\left(x-\hat{x}\right)^2+\left(y-\hat{y}\right)^2}{2\sigma^2}  \right]+\frac{h_r}{2\pi\sigma^2} \cdot \exp\left[ -\frac{\left(\sqrt{ \left(x-\hat{x}\right)^2+\left(y-\hat{y}\right)^2}-r\right)^2}{2\sigma^2_r} \right]\)';
             Z=Calc2DPeakRing(X,Y);         
         case 4
-            label{4}='\(\sigma\) ... Width of Peak';
-            label2{1}='\(h_{r,1}\) ... Height of first Ring';
-            label2{2}='\(r_1\) ... Radius of first Ring';            
-            label2{3}='\(\sigma_{r,1}\) ... Width of first Ring';            
-            label2{4}='\(h_{r,2}\) ... Height of second Ring';
-            label2{5}='\(r_2\) ... Radius of second Ring';            
-            label2{6}='\(\sigma_{r,2}\) ... Width of second Ring';                  
-            equation='\(I(x,y) = \frac{h}{2\pi\sigma^2} \cdot \exp \left[-\frac{(x-\hat{x})^2+(y-\hat{y})^2}{2\sigma^2}  \right]+\sum_{n=1}^{2}\frac{(-1)^n h_{r,n}}{2\pi\sigma^2_{r,n}} \cdot \exp\left[-\frac{\left (\sqrt{(x-\hat{x})^2+(y-\hat{y})^2}-r_n  \right )^2}{2\sigma^2_{r,n}} \right]\)';
-            Z=Calc2DPeak2Rings(X,Y);                     
+            label{4}='\(\sigma_x\) ... Width in X Direction';
+            label{5}='\(\sigma_y\) ... Width in Y Direction';
+            label{6}='\(\rho\) ... Orientation';
+            equation='\(I(x,y) = \frac{h}{2\pi\sigma_x\sigma_x\sqrt{1-\rho^2}} \cdot \exp \left[-\frac{1}{(1-\rho^2)} \left( \frac{\left(x-\hat{x}\right)^2}{2\sigma^2_x} -\rho\,\frac{\left(x-\hat{x}\right)}{\sigma_x}\,\frac{\left(y-\hat{y}\right)}{\sigma_y}+ \frac{\left(y-\hat{y}\right)^2}{2\sigma^2_y}\right) \right]\)';
+            Z=CalcDiatom(X,Y);                     
     end
     
     cla(hConfigGui.pMolecules.aModelLabel);
@@ -1337,6 +1335,25 @@ function Z=Calc2DPeakRing(X,Y)
 x=[0.3 0.2 8 1 4 0.3 7];
 Z = x(4) * exp( -( (X-x(1)).^2 + (Y-x(2)).^2 ) / x(3) ) + x(6) .* exp( -( ( sqrt( (X-x(1)).^2 + (Y-x(2)).^2) - x(7) ).^2 ) / x(5) );
 
-function Z=Calc2DPeak2Rings(X,Y)
-x=[0.3 0.2 8 0.6 4 0.3 4 4 0.2 8];
-Z = x(4) * exp( -( (X-x(1)).^2 + (Y-x(2)).^2 ) / x(3) ) - x(6) .* exp( -( (sqrt( (X-x(1)).^2 + (Y-x(2)).^2) - x(7)).^2) / x(5) ) + x(9) .* exp( -( ( sqrt( (X-x(1)).^2 + (Y-x(2)).^2) - x(10) ).^2) / x(8) );
+function Z=CalcDiatom(X,Y)
+x=[0.3 0.2 1/8 1/4 1 8 4 0.8];
+
+Z = zeros(size(X));
+
+xc = x(1) + x(6)/2*cos(x(5)) - x(7)/2*cos(pi/2-x(5));
+yc = x(2) + x(6)/2*sin(x(5)) + x(7)/2*sin(pi/2-x(5));
+Z = Z + exp( -(x(3)*( (X-xc)*cos(x(5)) + (Y-yc)*sin(x(5))).^2 + x(4)*( -(X-xc)*sin(x(5)) + (Y-yc)*cos(x(5))).^2));
+
+xc = x(1) + x(6)/2*cos(x(5)) + x(7)/2*cos(pi/2-x(5));
+yc = x(2) + x(6)/2*sin(x(5)) - x(7)/2*sin(pi/2-x(5)); 
+Z = Z + exp( -(x(3)*( (X-xc)*cos(x(5)) + (Y-yc)*sin(x(5))).^2 + x(4)*( -(X-xc)*sin(x(5)) + (Y-yc)*cos(x(5))).^2));
+
+xc = x(1) - x(6)/2*cos(x(5)) + x(7)/2*cos(pi/2-x(5));
+yc = x(2) - x(6)/2*sin(x(5)) - x(7)/2*sin(pi/2-x(5));
+Z = Z + exp( -(x(3)*( (X-xc)*cos(x(5)) + (Y-yc)*sin(x(5))).^2 + x(4)*( -(X-xc)*sin(x(5)) + (Y-yc)*cos(x(5))).^2));
+
+xc = x(1) - x(6)/2*cos(x(5)) - x(7)/2*cos(pi/2-x(5));
+yc = x(2) - x(6)/2*sin(x(5)) + x(7)/2*sin(pi/2-x(5));
+Z = Z + exp( -(x(3)*( (X-xc)*cos(x(5)) + (Y-yc)*sin(x(5))).^2 + x(4)*( -(X-xc)*sin(x(5)) + (Y-yc)*cos(x(5))).^2));
+
+Z = x(8) * Z;

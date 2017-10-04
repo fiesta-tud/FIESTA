@@ -266,7 +266,12 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             elseif size(Objects{f}.data{m},2)==3
                 Molecule(n).Results(j,10:12) = Objects{f}.data{m}(1,:);                
                 Molecule(n).Type = 'ring1';
-                Molecule(n).Results(j,13) = 0; 
+                Molecule(n).Results(j,13) = 0;
+            elseif size(Objects{f}.data{m},2)==2
+                Molecule(n).Results(j,10:11) = Objects{f}.data{m}(2,:);   
+                Molecule(n).Results(j,12) = single(Objects{f}.orientation(1,m));  
+                Molecule(n).Type = 'diatom';
+                Molecule(n).Results(j,13) = 0;
             else
                 Molecule(n).Type = 'symmetric';
                 Molecule(n).Results(j,10) = 0; 

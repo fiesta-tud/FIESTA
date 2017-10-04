@@ -1382,7 +1382,17 @@ if strcmp(Type,'Molecule')==1
         lYaxis(2).units{n+1}='[ABU]';                    
         lYaxis(2).list{n+2}='width (FWHM) ring';   
         lYaxis(2).data{n+2}=Object.Results(:,12);                
-        lYaxis(2).units{n+2}='[nm]';        
+        lYaxis(2).units{n+2}='[nm]';     
+    elseif strcmp(Object.Type,'diatom')
+        lYaxis(2).list{n}='distance chloroplast';
+        lYaxis(2).data{n}=Object.Results(:,10);      
+        lYaxis(2).units{n}='[nm]';                    
+        lYaxis(2).list{n+1}='separation chloroplasts';
+        lYaxis(2).data{n+1}=Object.Results(:,11);                
+        lYaxis(2).units{n+1}='[nm]';                    
+        lYaxis(2).list{n+2}='orientation(angle to x-axis)';
+        lYaxis(2).data{n+2}=Object.Results(:,12);                
+        lYaxis(2).units{n+2}='[rad]';     
     end
 end
 
