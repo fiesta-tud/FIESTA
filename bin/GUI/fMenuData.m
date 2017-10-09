@@ -264,13 +264,12 @@ if ~isempty(fOpenStruct)
             end
             for n = 1:nChannels
                 nFrames(n) = size(Stack{n},3);
-                if isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n})   
+                if any(isnan(Config.Time)) && (isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n}))   
                     Config.Time(n) = str2double(fInputDlg('Creation time corrupt - Enter plane time difference in ms:','100'));    
                 end    
                 if ~isnan(Config.Time(n))             
                    TimeInfo{n}=(0:nFrames(n)-1)*Config.Time(n);
                 end 
-
                 TformChannel{n} = [1 0 0; 0 1 0; 0 0 n];
             end
             if strcmp(fOpenStruct.Mode,'rSpatialSplitting')
@@ -290,6 +289,7 @@ if ~isempty(fOpenStruct)
                     tform = imregtform(I,IR,'rigid',optimizer,metric,'InitialTransformation',T);
                     T = tform.T;
                     TformChannel{n} = T;
+                    TformChannel{n}(3,3) = n;
                     set(hMainGui.Menu.mAlignChannels,'Enable','on');
                 end
             end
