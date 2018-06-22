@@ -6,10 +6,10 @@ switch func
         SaveConfig;
     case 'SetDefaultConfig'
         SetDefaultConfig;
-     case 'SaveDrift'
-        SaveDrift(varargin{1});
-    case 'LoadDrift'
-        LoadDrift(varargin{1});
+     case 'SaveCorrections'
+        SaveCorrections(varargin{1});
+    case 'LoadCorrections'
+        LoadCorrections(varargin{1});
 end
 
 function LoadConfig(hMainGui)
@@ -47,7 +47,7 @@ end
 function SetDefaultConfig
 global Config;
 global DirCurrent
-button = questdlg('Overwrite the default configuration?','Warning','Overwrite','Cancel','Cancel');
+button = fQuestDlg('Overwrite the default configuration?','Warning','Overwrite','Cancel','Cancel');
 if strcmp(button,'Overwrite')==1
     if isdeployed
         if ismac
@@ -144,25 +144,20 @@ if strcmp(button,'Overwrite')==1
     fclose(file_id);
 end
 
-function LoadDrift(hMainGui)
-fRightPanel('CheckDrift',hMainGui);
-[FileName, PathName] = uigetfile({'*.mat','FIESTA Drift(*.mat)'},'Load FIESTA Drift',fShared('GetLoadDir'));
+function LoadCorrections(hMainGui)
+global Stack;
+fRightPanel('CheckReference',hMainGui);
+[FileName, PathName] = uigetfile({'*.mat','FIESTA Transformation (*.mat)'},'Load FIESTA Reference Transformations',fShared('GetLoadDir'));
 if FileName~=0
     fShared('SetLoadDir',PathName);    
     Drift=fLoad([PathName FileName],'Drift');
     if ~isempty(Drift)
         if ~iscell(Drift)
-            Drift = num2cell(Drift,[1 2]);
+            fMsgDlg('References not compatible with this FIESTA version','error');
+            return;
         end
-        for n = 1:hMainGui.Values.MaxIdx(1)
-            if length(Drift)<n
-                Drift{n} = [];
-            else     
-                if size(Drift{n},2)==5
-                    nData = size(Drift{n},1);
-                    Drift{n} = [Drift{n}(:,1:3) ones(nData,1)*NaN Drift{n}(:,4:5) ones(nData,1)*NaN];
-                end
-            end
+        if numel(Stack)>numel(Drift)
+            Drift{numel(Stack)} = [];
         end
         setappdata(hMainGui.fig,'Drift',Drift);
     end
@@ -170,14 +165,11 @@ if FileName~=0
 end
 setappdata(0,'hMainGui',hMainGui);
 
-function SaveDrift(hMainGui)
+function SaveCorrections(hMainGui)
 Drift=getappdata(hMainGui.fig,'Drift'); %#ok<NASGU>
-[FileName, PathName] = uiputfile({'*.mat','MAT-files (*.mat)'},'Save FIESTA Drift',fShared('GetSaveDir'));
+[FileName, PathName] = uiputfile({'*.mat','MAT-files (*.mat)'},'Save FIESTA Reference Transformations',fShared('GetSaveDir'));
 if FileName~=0
     fShared('SetSaveDir',PathName);
-    file = [PathName FileName];
-    if isempty(findstr('.mat',file))
-        file = [file '.mat'];
-    end
-    save(file,'Drift');
+    file = strtok(FileName,'.');
+    save([PathName file '.mat'],'Drift');  
 end

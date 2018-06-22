@@ -8,8 +8,8 @@ switch func
         Sort(varargin{1});
     case 'FindMoving'
         FindMoving(varargin{1});
-    case 'FindDrift'
-        FindDrift(varargin{1});        
+    case 'FindReference'
+        FindReference(varargin{1});        
     case 'Normalize'
         Normalize(varargin{1});        
     case 'Filter'
@@ -65,12 +65,13 @@ function CombineTracks
 global Molecule;
 global Filament;
 hMainGui = getappdata(0,'hMainGui');
+hMainGui.Values.PostSpecial = 'Parallax';
 if strcmp(hMainGui.Values.PostSpecial,'Parallax')
     conv_fact = str2double(fInputDlg('Enter Parallax conversion factor:','1')); 
     if isnan(conv_fact)
         conv_fact = 1;
     end
-    Molecule = fTransformCoord(Molecule,0,0);
+    %Molecule = fTransformCoord(Molecule,0,0);
     Channel = [Molecule.Channel];
     Selected = [Molecule.Selected];
     if any(Selected)
@@ -208,7 +209,7 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
         FilSelect(idx(:,2)) = 1;
         fShared('DeleteTracks',hMainGui,[],FilSelect);
     end
-    set(hMainGui.Menu.mAlignChannels,'Checked','on');
+  %  set(hMainGui.Menu.mAlignChannels,'Checked','on');
     fShow('Tracks');
 end
 
@@ -402,93 +403,114 @@ if ~isempty(answer)
     fShow('Image');
 end
 
-function FindDrift(hMainGui)
+function FindReference(hMainGui)
 global Molecule;
 global KymoTrackMol;
-FileName = Molecule(1).File;
 nMol = length(Molecule);
-minFrame = [];
-maxFrame = [];
+minFrame = zeros(1,nMol);
+maxFrame = zeros(1,nMol);
+numFrames = zeros(1,nMol);
+Ch = [Molecule.Channel];
 for n = 1:nMol
-    minFrame = min( [minFrame min(Molecule(n).Results(:,1))] );
-    maxFrame = max( [maxFrame max(Molecule(n).Results(:,1))] );
-    if ~strcmp(FileName,Molecule(n).File)
-        fMsgDlg('Detected molecules of different stacks','error');
-        return;
-    end
+    minFrame(n) = Molecule(n).Results(1,1);
+    maxFrame(n) = Molecule(n).Results(end,1);
+    numFrames(n) = size(Molecule(n).Results,1);
 end
 NumDriftMol = str2double(fInputDlg('Enter number of molecules:','5'));
 if ~isempty(NumDriftMol)
-    Frames = (minFrame:maxFrame)';
-    sFrames = length(Frames);
-
-    %find all Molecules that have been tracked in all frames
-    p=1;
-    DriftMol = struct(Molecule(1));
-    for n = 1:nMol
-        if size(Molecule(n).Results,1) == sFrames
-            if all(Molecule(n).Results(:,1) == Frames)
-                DriftMol(p) = Molecule(n); 
-                index{p} = n;
-                drift_index{p} = p;
-                p = p+1;
+    R = cell(1,max(Ch));
+    XY = cell(1,max(Ch));
+    mXY = cell(1,max(Ch));
+    idx = cell(1,max(Ch));
+    sidx = cell(1,max(Ch));
+    gR = NaN;
+    for n = unique(Ch)
+        frames = 1:max(maxFrame(Ch==n));
+        idx{n} = find(Ch==n & minFrame==1 & maxFrame>0.9*frames(end));
+        cX = zeros(numel(frames),numel(idx{n}));
+        cY = zeros(numel(frames),numel(idx{n}));
+        nMol = numel(idx{n});
+        XY{n} = zeros(nMol,2); 
+        c = [];
+        for m = 1:nMol
+            if numel(frames)>1
+                cX(:,m) = interp1(Molecule(idx{n}(m)).Results(:,1),Molecule(idx{n}(m)).Results(:,3),frames,'linear','extrap');
+                cY(:,m) = interp1(Molecule(idx{n}(m)).Results(:,1),Molecule(idx{n}(m)).Results(:,4),frames,'linear','extrap');
+            end
+            XY{n}(m,:) = [mean(Molecule(idx{n}(m)).Results(:,3)) mean(Molecule(idx{n}(m)).Results(:,4))]/Molecule(idx{n}(m)).PixelSize;
+            for n1 = 1:nMol
+                for n2 = 1:nMol
+                    if m~=n1 && m~=n2 && n1~=n2
+                        c = [c; m n1 n2];
+                    end
+                end
             end
         end
-    end
-    if NumDriftMol>length(DriftMol)
-        fMsgDlg({'Not enough molecules for drift correction','Check whether there are enough molecules','that have been tracked in every frame'},'error');
-        return;
-    end
-    current = [];
-    nMol = length(DriftMol);
-    correlation = zeros(nMol)*NaN;
-    for n = 1:nMol
-        for m = n+1:nMol
-            X = (DriftMol(n).Results(:,3)-DriftMol(n).Results(1,3)) - (DriftMol(m).Results(:,3) - DriftMol(m).Results(1,3));
-            Y = (DriftMol(n).Results(:,4)-DriftMol(n).Results(1,4)) - (DriftMol(m).Results(:,4) - DriftMol(m).Results(1,4));
-            correlation(n,m) = sum( X.^2 + Y.^2 );
-        end
-    end
-    l=1;
-    while length(current) < NumDriftMol
-        [~,n]=min(min(correlation,[],1));
-        [~,m]=min(min(correlation,[],2));
-        if n>nMol
-            p = n;
+        %c = perms(1:numel(idx{n}));
+        if size(c,2)>2
+            mXY{n} = [XY{n}(c(:,1),1) XY{n}(c(:,1),2) XY{n}(c(:,2),1)-XY{n}(c(:,1),1) XY{n}(c(:,2),2)-XY{n}(c(:,1),2) XY{n}(c(:,3),1)-XY{n}(c(:,1),1) XY{n}(c(:,3),2)-XY{n}(c(:,1),2)];  
         else
-            p = length(DriftMol)+1;
-            correlation(p,:) = NaN;
-            correlation(:,p) = NaN;
+            mXY{n} = [XY{n}(:,1) XY{n}(:,2) XY{n}(:,1) XY{n}(:,2)];  
         end
-        index{p} = [index{n} index{m}];
-        drift_index{p} = [drift_index{n}  drift_index{m}];
-        current = drift_index{p};
-        X = zeros(sFrames,length(current));
-        Y = X;
-        for k = 1:length(current)
-            X(:,k) = (DriftMol(current(k)).Results(:,3)-DriftMol(current(k)).Results(1,3));
-            Y(:,k) = (DriftMol(current(k)).Results(:,4)-DriftMol(current(k)).Results(1,4));
+        if numel(frames)>1
+            R{n} = sum(0.5*corrcoef(cX)+0.5*corrcoef(cY))/numel(idx{n});
+        else
+            R{n} = ones(1,numel(idx{n}));
         end
-        DriftMol(p).Results(:,3) = mean(X,2);
-        DriftMol(p).Results(:,4) = mean(Y,2);
-        for k = 1:length(DriftMol)
-            X = (DriftMol(k).Results(:,3)-DriftMol(k).Results(1,3)) - (DriftMol(p).Results(:,3));
-            Y = (DriftMol(k).Results(:,4)-DriftMol(k).Results(1,4)) - (DriftMol(p).Results(:,4));
-            if any(ismember(drift_index{k},current))
-                correlation(k,p) = NaN;
+        if ~isempty(XY{1})
+            if n==1
+                midx = zeros(numel(idx{1}),numel(idx));
+                midx(:,1) = 1:numel(idx{1});
+                gR = R{1};
             else
-                correlation(k,p) = sum( X.^2 + Y.^2 );
+                try
+                    p = matchFeatures(mXY{n}(:,3:end),mXY{1}(:,3:end),'Unique',true);
+                    tform = estimateGeometricTransform(mXY{n}(p(:,1),1:2),mXY{1}(p(:,2),1:2),'similarity');
+                    pairs = matchFeatures(XY{1}(:,1:2),transformPointsForward(tform,XY{n}(:,1:2)),'Unique',true);
+                catch
+                    pairs = [];
+                end
+                if isempty(pairs)
+                    gR(:) = NaN;
+                else
+                    k = ismember(midx(:,1),pairs(:,1));
+                    midx(k,n) = pairs(:,2);
+                    gR(k) = gR(k) + R{n}(pairs(:,2));
+                    gR(~k) = NaN;
+                end
             end
         end
-        correlation(current,p) = NaN;
-        correlation(m,n) = NaN;
-        correlation(p,p) = NaN;
     end
-    k = find([Molecule.Selected]==1);
+    if all(isnan(gR))
+        for n = unique(Ch)
+            [~,k] = sort(R{n});
+            sidx{n} = idx{n}(k);
+            if numel(sidx{n})>NumDriftMol
+                sidx{n}(NumDriftMol+1:end) = [];
+            end
+        end
+        fMsgDlg({'Could not match enough reference molecules, please check whether there are enough molecules in each channel that have been tracked and connected properly.','',...
+                ['Only selected the ' num2str(NumDriftMol) ' most similiar molecules per channel (if possible).']},'warn');
+    else
+        k = isnan(gR);
+        gR(k) = [];
+        midx(k,:) = [];
+        [~,k] = sort(gR,'descend');
+        for n = 1:max(Ch)
+            sidx{n} = idx{n}(midx(k,n));
+            if numel(sidx{n})>NumDriftMol
+                sidx{n}(NumDriftMol+1:end) = [];
+            end    
+        end
+        if numel(gR)<NumDriftMol
+            fMsgDlg({'Could not match enough reference molecules, please check whether there are enough molecules in each channel that have been tracked and connected properly.','',...
+                ['Only selected the ' num2str(numel(gR)) ' most similiar molecules that could be matched.']},'warn');
+        end
+    end
     for n = k
         Molecule(n)=fShared('SelectOne',Molecule(n),KymoTrackMol,n,0);
     end
-    for n = index{p}
+    for n = cell2mat(sidx)
         Molecule(n)=fShared('SelectOne',Molecule(n),KymoTrackMol,n,1);
     end
     fRightPanel('UpdateList',hMainGui.RightPanel.pData.MolList,Molecule,hMainGui.RightPanel.pData.sMolList,hMainGui.Menu.ctListMol);

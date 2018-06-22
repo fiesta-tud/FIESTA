@@ -28,8 +28,8 @@ if ~isempty(findobj('Tag','hMainGui'))
     close all hidden;
 end
 
-hMainGui.Version='Version 1.05.0005';
-hMainGui.Date='June 30th, 2016';
+hMainGui.Version='Version 1.6.0';
+hMainGui.Date='21. March 2018';
 hMainGui.Name=['FIESTA - Fluorescence Image Evaluation Software for Tracking and Analysis -- ' hMainGui.Version];
 
 %create figure
@@ -79,7 +79,11 @@ set(hMainGui.fig, 'WindowButtonUpFcn',@ButtonUp);
 set(hMainGui.fig, 'WindowScrollWheelFcn',@Scroll);  
 
 set(hMainGui.fig,'Visible','on');
-maximize(hMainGui.fig);
+try
+    set(hMainGui.fig,'WindowState','maximized');
+catch
+    maximize(hMainGui.fig);
+end
 
 function Exit(hObject,eventdata) %#ok<INUSD>
 global PathBackup;
@@ -96,6 +100,7 @@ if strcmp(button,'Yes')
     delete(findobj('Tag','hMergeGui'));
     delete(findobj('Tag','hPathsStatsGui'));
     delete(findobj('Tag','hMainGui'));
+    delete(gcp('nocreate'));
     clear global;
 end
 
@@ -186,12 +191,10 @@ global Config;
 global Stack;
 y=size(Stack{1},1);
 x=size(Stack{1},2);
-z=size(Stack{1},3);
 c=numel(Stack);
 
 Config.FirstTFrame=1;
 Config.FirstCFrame=1;
-Config.LastFrame=z;
 
 if c>1
     set(hMainGui.ToolBar.ToolChannels,'Visible','off','State','off');
@@ -216,6 +219,7 @@ hMainGui.Values.StackColor = [];
 
 MaxImage = zeros(y,x,c);
 AverageImage = zeros(y,x,c);
+z = 0;
 for n = 1:c
     %find Max and Min Values for Stack
     PixMin = squeeze(min(min(Stack{n})));
@@ -227,19 +231,27 @@ for n = 1:c
 
     hMainGui.Values.MaxRelThresh(n)=2000;
 
-    hMainGui.Values.ScaleMin(n)=round(mean(PixMin));
-    hMainGui.Values.ScaleMax(n)=round(mean(PixMax));
     hMainGui.Values.Thresh(n)=min([round(mean2(Stack{n}(:,:,1))+5*std2(Stack{n}(:,:,1))) hMainGui.Values.PixMax(n)]);
+    hMainGui.Values.ScaleMin(n)=round(mean(PixMin));
+    hMainGui.Values.ScaleMax(n) = hMainGui.Values.Thresh(n);
     hMainGui.Values.RelThresh(n)=200;
     
     hMainGui.Values.StackColor(n) = n + 1;
     MaxImage(:,:,n) = max(Stack{n},[],3);
     AverageImage(:,:,n) = mean(Stack{n},3);
+    z = max([z size(Stack{n},3)]);
 end
-
+Config.LastFrame=z;
 set(hMainGui.RightPanel.pTools.eKymoStart,'String','1');
 set(hMainGui.RightPanel.pTools.eKymoEnd,'String',num2str(z));
 
+if Config.Threshold.FWHM<2.5*Config.PixSize
+    Config.Threshold.FWHM = round(3*Config.PixSize,1,'significant');
+    if ~all(Config.Time==0)
+        Config.ConnectMol.MaxVelocity = round(Config.PixSize*1000/max(abs(Config.Time)),1,'significant');
+        Config.ConnectFil.MaxVelocity = round(Config.PixSize*1000/max(abs(Config.Time)),1,'significant');
+    end
+end
 set(hMainGui.MidPanel.tInfoTime,'String',sprintf('Time: %0.3f s',0));
 %set Scale Images
 SetScale(hMainGui);
@@ -1032,55 +1044,73 @@ global KymoTrackFil;
 X=hMainGui.SelectRegion.X;
 Y=hMainGui.SelectRegion.Y;
 stidx = getChannels(hMainGui);
-k = find([Molecule.Selected]==1);
+MolSelect = [Molecule.Selected];
+k = find(MolSelect==1);
 for n = k
     Molecule(n)=fShared('SelectOne',Molecule(n),KymoTrackMol,n,0);
 end
-k = find([Filament.Selected]==1);
+FilSelect = [Filament.Selected];
+k = find(FilSelect==1);
 for n = k
     Filament(n)=fShared('SelectOne',Filament(n),KymoTrackFil,n,0);       
+end
+if all(MolSelect==0) && all(FilSelect==0)
+    MolSelect(:) = 1;
+    FilSelect(:) = 1;
 end
 SelectedPoints = zeros(0,4);
 if strcmp(hMainGui.CurrentAxes,'View')
     X = X * hMainGui.Values.PixSize;
     Y = Y * hMainGui.Values.PixSize;
-    k = find( [Molecule.Visible]==1 & [Molecule.Selected]>-1 & ismember([Molecule.Channel],stidx));
+    k = find(MolSelect==1 & [Molecule.Visible]==1 & [Molecule.Selected]>-1 & ismember([Molecule.Channel],stidx));
     for n = k
         IN=inpolygon(Molecule(n).Results(:,3),Molecule(n).Results(:,4),X,Y);
         if any(IN)
             SelectedPoints = [SelectedPoints; ones(sum(IN),1)*n find(IN==1) Molecule(n).Results(IN,3) Molecule(n).Results(IN,4)];
+        else
+            SelectedPoints = [SelectedPoints; n 0 0 0];
         end
     end
-    k = find( [Filament.Visible]==1 & [Filament.Selected]>-1 & ismember([Filament.Channel],stidx));
+    k = find(FilSelect==1 & [Filament.Visible]==1 & [Filament.Selected]>-1 & ismember([Filament.Channel],stidx));
     for n = k
         IN=inpolygon(Filament(n).Results(:,3),Filament(n).Results(:,4),X,Y);
         if any(IN)
             SelectedPoints = [SelectedPoints; ones(sum(IN),1)*n*1i find(IN==1) Filament(n).Results(IN,3) Filament(n).Results(IN,4)];
+        else
+            SelectedPoints = [SelectedPoints; n*1i 0 0 0];
         end
-    end     
-    line(hMainGui.MidPanel.aView,SelectedPoints(:,3)/hMainGui.Values.PixSize,SelectedPoints(:,4)/hMainGui.Values.PixSize,'Color','r','LineStyle','none','Marker','s','MarkerFaceColor',[1 0.84 0],'MarkerEdgeColor',[1 0.27 0],'Tag','pSelectedPoints');
+    end    
+    X = SelectedPoints(SelectedPoints(:,2)>0,3);
+    Y = SelectedPoints(SelectedPoints(:,2)>0,4);
+    line(hMainGui.MidPanel.aView,X/hMainGui.Values.PixSize,Y/hMainGui.Values.PixSize,'Color','r','LineStyle','none','Marker','s','MarkerFaceColor',[1 0.84 0],'MarkerEdgeColor',[1 0.27 0],'Tag','pSelectedPoints');
 elseif strcmp(hMainGui.CurrentAxes,'Kymo')
     idx = [KymoTrackMol.Index];
-    obj = find([Molecule(idx).Visible]==1 & [Molecule(idx).Selected]>-1 & ismember([Molecule(idx).Channel],stidx));
+    obj = find(MolSelect(idx)==1 & [Molecule(idx).Visible]==1 & [Molecule(idx).Selected]>-1 & ismember([Molecule(idx).Channel],stidx));
     for n = obj
         IN=inpolygon(KymoTrackMol(n).Track(:,1),KymoTrackMol(n).Track(:,2),Y,X);
         if any(IN)
             idx_mol = KymoTrackMol(n).Index;
             [~,frame_idx] = ismember(KymoTrackMol(n).Track(IN,1),Molecule(idx_mol).Results(:,1));
-            SelectedPoints = [SelectedPoints; ones(sum(IN),1)*idx_mol frame_idx KymoTrackMol(n).Track(IN,1) KymoTrackMol(n).Track(IN,2)];    
+            SelectedPoints = [SelectedPoints; ones(sum(IN),1)*idx(n) frame_idx KymoTrackMol(n).Track(IN,1) KymoTrackMol(n).Track(IN,2)];    
+        else
+            SelectedPoints = [SelectedPoints; idx(n) 0 0 0];
         end
     end
     idx = [KymoTrackFil.Index];
-    obj = find([Filament(idx).Visible]==1 & [Filament(idx).Selected]>-1 & ismember([Filament(idx).Channel],stidx));
+    obj = find(FilSelect==1 & [Filament(idx).Visible]==1 & [Filament(idx).Selected]>-1 & ismember([Filament(idx).Channel],stidx));
     for n = obj
         IN=inpolygon(KymoTrackFil(n).Track(:,1),KymoTrackFil(n).Track(:,2),Y,X);
         if any(IN)
             idx_fil = KymoTrackFil(n).Index;
             [~,frame_idx] = ismember(KymoTrackFil(n).Track(IN,1),Filament(idx_fil).Results(:,1));
-            SelectedPoints = [SelectedPoints; ones(sum(IN),1)*idx_fil*1i frame_idx KymoTrackFil(n).Track(IN,1) KymoTrackFil(n).Track(IN,2)];    
+            SelectedPoints = [SelectedPoints; ones(sum(IN),1)*idx(n)*1i frame_idx KymoTrackFil(n).Track(IN,1) KymoTrackFil(n).Track(IN,2)];    
+        else
+            SelectedPoints = [SelectedPoints; idx(n)*1i 0 0 0];   
         end
     end
-    line(hMainGui.MidPanel.aKymoGraph,SelectedPoints(:,4),SelectedPoints(:,3),'Color','r','LineStyle','none','Marker','s','MarkerFaceColor',[1 0.84 0],'MarkerEdgeColor',[1 0.27 0],'Tag','pSelectedPoints');
+    X = SelectedPoints(SelectedPoints(:,2)>0,4);
+    Y = SelectedPoints(SelectedPoints(:,2)>0,3);
+    line(hMainGui.MidPanel.aKymoGraph,X,Y,'Color','r','LineStyle','none','Marker','s','MarkerFaceColor',[1 0.84 0],'MarkerEdgeColor',[1 0.27 0],'Tag','pSelectedPoints');
 end
 hMainGui.SelectLast = [];
 hMainGui.SelectMode = [];
@@ -1423,7 +1453,7 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
                     hMainGui.Measure(nMeasure).LenArea=0;
                     XI=[];
                     YI=[];
-                    for i=1:length(hMainGui.Measure(nMeasure).X)-1;
+                    for i=1:length(hMainGui.Measure(nMeasure).X)-1
                         len=norm([hMainGui.Measure(nMeasure).X(i+1)-hMainGui.Measure(nMeasure).X(i) hMainGui.Measure(nMeasure).Y(i+1)-hMainGui.Measure(nMeasure).Y(i)]);
                         hMainGui.Measure(nMeasure).LenArea=hMainGui.Measure(nMeasure).LenArea+hMainGui.Values.PixSize/1000*norm([hMainGui.Measure(nMeasure).X(i+1)-hMainGui.Measure(nMeasure).X(i) hMainGui.Measure(nMeasure).Y(i+1)-hMainGui.Measure(nMeasure).Y(i)]);
                         XI=[XI linspace(hMainGui.Measure(nMeasure).X(i),hMainGui.Measure(nMeasure).X(i+1),ceil(len))];
@@ -1537,6 +1567,15 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
     if ~isempty(key)
         if key==127 || key==8
             if strcmp(get(hMainGui.RightPanel.pData.panel,'Visible'),'on') || strcmp(get(hMainGui.RightPanel.pTools.panel,'Visible'),'on')
+                if ~isempty(evnt.Modifier)
+                    if ischar(evnt.Modifier{1}) && strcmp(evnt.Modifier{1},'shift')
+                        hMainGui.CurrentKey = 'shift';
+                    else
+                        hMainGui.CurrentKey = '';
+                    end
+                else
+                    hMainGui.CurrentKey = '';
+                end
                 fShared('DeleteTracks',hMainGui,[],[]);
             elseif strcmp(get(hMainGui.RightPanel.pQueue.panel,'Visible'),'on')
                 if ~isempty(Queue)
@@ -1545,6 +1584,9 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
                     fRightPanel('UpdateQueue',hMainGui.RightPanel.pQueue.LocList,Queue,hMainGui.RightPanel.pQueue.sLocList,'Local');
                 end
             end
+        end
+        if key == 72
+            fShared('DeleteTracks',hMainGui,Inf,Inf);
         end
     end
     hMainGui.CurrentKey=get(hMainGui.fig,'CurrentKey');

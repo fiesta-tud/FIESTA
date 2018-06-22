@@ -1,8 +1,8 @@
 function cObj = fMenuStatistics(func,varargin)
 cObj =[];
 switch func
-    case 'MSD'
-        MSD;
+    case 'DiffusionAnalysis'
+        DiffusionAnalysis;
     case 'AverageFilament'
         AverageFilament;   
     case 'CountObjects'
@@ -124,7 +124,7 @@ global Objects;
 cObj=cell(1,2);
 hMainGui=getappdata(0,'hMainGui');
 nCh = getChIdx;
-hMainGui.Values.FrameIdx(nCh)=hMainGui.Values.FrameIdx(nCh)-4i;
+hMainGui.Values.FrameIdx(nCh)=-4i;
 setappdata(0,'hMainGui',hMainGui);
 fShow('Image');
 XF = [];
@@ -178,7 +178,8 @@ end
 
 
 function cObj = CountSpots(X,nPoints)
-[class,~]=dbscan(X,nPoints-1,1);
+%[class,~]=dbscan(X,nPoints-1,1);
+class = clusterdata(X,'criterion','distance','cutoff',1,'savememory','on','linkage','centroid');
 p=1;
 cObj=[];
 for n=1:max(class)
@@ -248,7 +249,7 @@ for m = find(Selected)
     if min(nData)~=max(nData)
         %number of pixel positions per frame is different
         for n =1:nFrames
-            if nData(n)~=max(nData);
+            if nData(n)~=max(nData)
                 %interpolated to get the same number of pixel positions per frame
                 new_vector = 1:(2*nData(n)-max(nData))/nData(n):nData(n);
                 old_vector = 1:nData(n);
@@ -280,6 +281,7 @@ for m = find(Selected)
     end
     %average the filament pixel positions over all frames
     Filament(m).Data{1} = [mean(X,2) mean(Y,2) mean(D,2) mean(W,2) mean(H,2) mean(B,2)];  
+    Filament(m).Results(1,1:2) = [1 0]; % reset frame number and time
     Filament(m).Data(2:end)=[];
     Filament(m).Results(2:end,:)=[];
     Filament(m).PosStart(2:end,:)=[];
@@ -290,32 +292,34 @@ for m = find(Selected)
     end
 end
 
-function [sd,tau] = CalcSD(Results,Dis,sd,tau)
+function [sd_2D,sd_1D,tau] = CalcSD(Results,Dis,sd_2D,sd_1D,tau)
 %get frame numbers, time, X/Y position
-F=Results(:,1);
-T=Results(:,2);
-X=Results(:,3);
-Y=Results(:,4);    
+F=double(Results(:,1));
+T=double(Results(:,2));
+X=double(Results(:,3));
+Y=double(Results(:,4));    
 %calculate square displacment and time difference with interpolated data
 min_frame=min(F);
 max_frame=max(F);
-for k=1:fix(log2(max_frame-min_frame))
-    if length(sd)<k
+for k=1:(max_frame-min_frame)
+    if length(sd_2D)<k
         %create cell for sd and tau if not existing
-        sd{k}=[];
+        sd_2D{k}=[];
         tau{k}=[];
+        if ~isempty(Dis)
+            sd_1D{k}=[];
+        end
     end
     n=1;
-    while F(n)+2^(k-1)<max_frame
+    while F(n)+k<=max_frame
         %check if datapoint was tracked 
-        num_frame = find(F(n)+2^(k-1) == F, 1);
+        num_frame = find(F(n)+k == F, 1);
         if ~isempty(num_frame)
            %calculate square displacment
             if ~isempty(Dis) %1D
-                sd{k}=[sd{k} ((Dis(num_frame)-Dis(n))/1000)^2];
-            else %2D
-                sd{k}=[sd{k} ((X(num_frame)-X(n))/1000)^2 + ((Y(num_frame)-Y(n))/1000)^2];
+                sd_1D{k}=[sd_1D{k} ((Dis(num_frame)-Dis(n))/1000)^2];
             end
+            sd_2D{k}=[sd_2D{k} ((X(num_frame)-X(n))/1000)^2 + ((Y(num_frame)-Y(n))/1000)^2];
             %calculate time difference
             tau{k}=[tau{k} T(num_frame)-T(n)];                
             n=num_frame;
@@ -325,10 +329,9 @@ for k=1:fix(log2(max_frame-min_frame))
     end
 end
 
-function MSD
+function DiffusionAnalysis
 global Molecule
 global Filament
-%check whether to use 1D or 2D mean square displacement
 if isempty(Molecule) && isempty(Filament)
     return;
 end
@@ -337,66 +340,311 @@ if max(Selected)==0
     fMsgDlg('No Track selected!','error');
     return;
 end
-Mode =  fQuestDlg({'Do you want to calculate the','mean square displacement for all','selected tracks in one dimension or two?'},'Mean Square Displacement',{'1D','2D','Cancel'},'1D');
+Mode =  fQuestDlg({'Do you want to calculate the','diffusion coefficient?'},'Diffusion Analysis',{'CVE','MSD','Cancel'},'CVE');
 if ~strcmp(Mode,'Cancel') && ~isempty(Mode)
-    %define variable for square displacment and time difference
-    sd=[];
-    tau=[];
-    if ~isempty(Molecule)
-        %for every selected molecule
-        for n = find([Molecule.Selected]==1)
-            if strcmp(Mode,'2D')
-                Dis = []; 
-            else
-                if ~isempty(Molecule(n).PathData)
-                    Dis = Molecule(n).PathData(:,3);
-                else
-                    fMsgDlg({'Some tracks have no path present.','Use ''Path Statistics'' to get path.'},'error');
-                    return;
-                end
-            end
-            [sd,tau] = CalcSD(Molecule(n).Results,Dis,sd,tau);
+    if strcmp(Mode,'CVE')
+        MolSelect = find([Molecule.Selected]==1);
+        FilSelect = find([Filament.Selected]==1);
+        if ~isempty(MolSelect) && isempty(FilSelect)   
+            DiffusionCVE(Molecule(MolSelect));
+        elseif isempty(MolSelect) && ~isempty(FilSelect)   
+            DiffusionCVE(Filament(FilSelect));
+        else
+            fMsgDlg('Select either Molecules or Filaments (not both)!','error');
+            return;
         end
-    end
-    if ~isempty(Filament)
-        %for every selected filament
-        for n = find([Filament.Selected]==1)
-            if strcmp(Mode,'2D')
-                Dis = []; 
-            else
-                if ~isempty(Filament(n).PathData)
-                    Dis = Filament(n).PathData(:,3);
-                else
-                    fMsgDlg({'Some tracks have no path present.','Use ''Path Statistics'' to get path.'},'error');
-                    return;
-                end
-            end
-            %calculate square displacement
-            [sd,tau] = CalcSD(Filament(n).Results,Dis,sd,tau);
-        end
-    end
-    for m=1:length(sd)
-        TimeVsMSD(m,1)=mean(tau{m});
-        TimeVsMSD(m,2)=mean(sd{m});
-        TimeVsMSD(m,3)=std(sd{m})/sqrt(length(sd{m}));
-        TimeVsMSD(m,4)=length(sd{m});
-    end
-    [FileName, PathName, FilterIndex] = uiputfile({'*.mat','MAT-file (*.mat)';'*.txt','TXT-File (*.txt)'},'Save FIESTA Mean Square Displacement',fShared('GetSaveDir'));
-    file = [PathName FileName];
-    if FilterIndex==1
-        fShared('SetSaveDir',PathName);
-        if isempty(strfind(file,'.mat'))
-            file = [file '.mat'];
-        end
-        save(file,'TimeVsMSD');
-    elseif FilterIndex==2
-        fShared('SetSaveDir',PathName);
-        if isempty(strfind(file,'.txt'))
-            file = [file '.txt'];
-        end
-        f = fopen(file,'w');
-        fprintf(f,'Time[s]\tMSD[?m?]\tError(mean)\tN\n');
-        fprintf(f,'%f\t%f\t%f\t%f\n',TimeVsMSD');
-        fclose(f);
+    else
+        DiffusionMSD;
     end
 end
+
+function [IndD_2D,IndD_1D,nData] = CalcIndCVE(Object)
+nObj = length(Object);
+IndD_2D = zeros(1,nObj);
+IndD_1D = zeros(1,nObj);
+nData = zeros(1,nObj);
+%parfor (n=1:nObj,Config.NumCores)
+for n = 1:nObj
+    nData(n) = size(Object(n).Results,1);
+    F=double(Object(n).Results(:,1));
+    T=double(Object(n).Results(:,2));
+    X=double(Object(n).Results(:,3)/1000);
+    Y=double(Object(n).Results(:,4)/1000);    
+    idx1 = find(F(2:end)-F(1:end-1)==1);
+    idx2 = find(F(2:end-1)-F(1:end-2)==1 & F(3:end)-F(2:end-1)==1);
+    dT = T(2:end)-T(1:end-1);
+    dX= X(2:end)-X(1:end-1);
+    dY= Y(2:end)-Y(1:end-1);
+    IndD_2D(n) = (mean(dX(idx1).^2)/(2*mean(dT(idx1)))+ mean(dX(idx2).*dX(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2))/2+...
+                 (mean(dY(idx1).^2)/(2*mean(dT(idx1)))+ mean(dY(idx2).*dY(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2))/2; %according to Jens
+    if ~isempty(Object(n).PathData)
+        Dis = double(real(Object(n).PathData(:,4))/1000);
+        dDis = Dis(2:end)-Dis(1:end-1);
+        IndD_1D(n) = mean(dDis(idx1).^2)/(2*mean(dT(idx1)))+ mean(dDis(idx2).*dDis(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2);
+    end
+end
+if all(IndD_1D==0)
+    IndD_1D = [];
+end
+IndD_2D(isnan(IndD_2D)) = 0;
+IndD_1D(isnan(IndD_1D)) = 0;
+
+function [D2D,D1D] = CalcGlobalCVE(Object)
+nObj = length(Object);
+F = NaN;
+T = NaN;
+X = NaN;
+Y = NaN;
+Dis = NaN;
+for n = 1:nObj
+    F=[F;double(Object(n).Results(:,1));NaN];
+    T=[T;double(Object(n).Results(:,2));NaN];
+    X=[X;double(Object(n).Results(:,3))/1000;NaN];
+    Y=[Y;double(Object(n).Results(:,4))/1000;NaN];
+    if ~isempty(Object(n).PathData)
+        Dis = [Dis;double(real(Object(n).PathData(:,4))/1000);NaN];
+    end
+end
+idx1 = find(F(2:end)-F(1:end-1)==1);
+idx2 = find(F(2:end-1)-F(1:end-2)==1 & F(3:end)-F(2:end-1)==1);
+dT = T(2:end)-T(1:end-1);
+dX= X(2:end)-X(1:end-1);
+dY= Y(2:end)-Y(1:end-1);
+D2D = (mean(dX(idx1).^2)/(2*mean(dT(idx1)))+ mean(dX(idx2).*dX(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2))/2+...
+      (mean(dY(idx1).^2)/(2*mean(dT(idx1)))+ mean(dY(idx2).*dY(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2))/2;
+if length(Dis)>1
+    dDis = Dis(2:end)-Dis(1:end-1);
+    D1D = mean(dDis(idx1).^2)/(2*mean(dT(idx1)))+ mean(dDis(idx2).*dDis(idx2+1))/mean((dT(idx2)+dT(idx2+1))/2);
+else 
+    D1D = 0;
+end
+
+
+function DiffusionCVE(Object)
+global Config;
+[FileName, PathName] = uiputfile({'*.mat','MAT-file (*.mat)'},'Save FIESTA Mean Square Displacement',fShared('GetSaveDir'));
+if FileName ~= 0
+    fShared('SetSaveDir',PathName);
+    [file, ~] = strtok(FileName, '.');
+    rng('shuffle');
+    nBoot = 100;
+    nObj = length(Object);
+    WeightedD_2D = zeros(1,100);
+    WeightedD_1D = zeros(1,100);
+    GlobalD_2D = zeros(1,100);
+    GlobalD_1D = zeros(1,100);
+    FittedD_2D = zeros(1,100);
+    FittedD_1D = zeros(1,100);
+    [IndD_2D,IndD_1D,nData] = CalcIndCVE(Object);
+    xd_2D = median(IndD_2D)-3*iqr(IndD_2D):6*iqr(IndD_2D)/1000:median(IndD_2D)+3*iqr(IndD_2D);
+    D2Dmat = zeros(nBoot,length(xd_2D));
+    Fit2Dmat = zeros(nBoot,length(xd_2D));
+    xd_1D = median(IndD_1D)-3*iqr(IndD_1D):6*iqr(IndD_1D)/1000:median(IndD_1D)+3*iqr(IndD_1D);
+    D1Dmat = zeros(nBoot,length(xd_1D));
+    Fit1Dmat = zeros(nBoot,length(xd_1D));
+    parfor (n=1:100,Config.NumCores)
+        ridx = randi(nObj,1,nObj);
+        w = mle(IndD_2D(ridx),'distribution','normal');
+        FittedD_2D(n) = w(1);
+        WeightedD_2D(n) = sum(IndD_2D(ridx).*nData(ridx))/sum(nData(ridx));
+        [N,edges] = histcounts(IndD_2D(ridx),'BinMethod','scott','Normalization','pdf','BinLimits',[median(IndD_2D)-3*iqr(IndD_2D) median(IndD_2D)+3*iqr(IndD_2D)]);
+        xb = (edges(2:end)+edges(1:end-1))/2;
+        D2Dmat(n,:) = interp1(xb,N,xd_2D);
+        Fit2Dmat(n,:) = pdf('normal',xd_2D,w(1),w(2));
+        if ~isempty(IndD_1D)
+            w = mle(IndD_1D(ridx),'distribution','normal');
+            FittedD_1D(n) = w(1);
+            WeightedD_1D(n) = sum(IndD_1D(ridx).*nData(ridx))/sum(nData(ridx));
+            [N,edges] = histcounts(IndD_1D(ridx),'BinMethod','scott','Normalization','pdf','BinLimits',[median(IndD_1D)-3*iqr(IndD_1D) median(IndD_1D)+3*iqr(IndD_1D)]);
+            xb = (edges(2:end)+edges(1:end-1))/2;
+            D1Dmat(n,:) = interp1(xb,N,xd_1D);
+            Fit1Dmat(n,:) = pdf('normal',xd_1D,w(1),w(2));
+        end
+        [D2D,D1D] = CalcGlobalCVE(Object(ridx));
+        GlobalD_2D(n) = D2D;
+        GlobalD_1D(n) = D1D;
+    end
+    if all(FittedD_1D==0)
+        fig = figure('Units','centimeters','Position',[2 2 8 8],'Toolbar','none','MenuBar','none','DockControls','off',...
+                    'PaperUnits','centimeters','PaperSize',[8 8],'Color','w','PaperPositionMode','manual','PaperPosition',[0 0 8 8]);
+    else
+        fig = figure('Units','centimeters','Position',[2 2 16 8],'Toolbar','none','MenuBar','none','DockControls','off',...
+                    'PaperUnits','centimeters','PaperSize',[16 8],'Color','w','PaperPositionMode','manual','PaperPosition',[0 0 16 8]);
+    end
+    aPlot2D = axes(fig,'Units','centimeters','Position',[1.5 1.25 6 6],'TickDir','out','Color','none');
+    plot(xd_2D,mean(D2Dmat,1),'b-');
+    hold on;
+    plot(xd_2D,mean(D2Dmat,1)+2*std(D2Dmat,[],1),'b--');
+    plot(xd_2D,mean(D2Dmat,1)-2*std(D2Dmat,[],1),'b--');
+    plot(xd_2D,mean(Fit2Dmat,1),'k-','LineWidth',1);
+    xlim([min(xd_2D) max(xd_2D)]);
+    ylim([0 1.8*max(mean(D2Dmat,1))]);
+    xlabel(['diffusion coefficient [' char(181) 'm' char(178) '/s]']);
+    ylabel('probabilty density');
+    text(aPlot2D,'Units','normalized','HorizontalAlignment','right','Position',[0.95 0.82],'String',...
+                 {['D(weighted) = ' val2str(mean(WeightedD_2D),2*std(WeightedD_2D)) char(181) 'm' char(178) '/s'],...
+                  ['D(global) = ' val2str(mean(GlobalD_2D),2*std(GlobalD_2D)) char(181) 'm' char(178) '/s'],...
+                  ['D(fitted) = ' val2str(mean(FittedD_2D),2*std(FittedD_2D)) char(181) 'm' char(178) '/s'],...
+                  ['N = ' num2str(nObj)]});axes(fig,'Units','centimeters','Position',get(aPlot2D,'Position'),'Box','on','xtick',[],'ytick',[]);
+    axes(aPlot2D); 
+    save([PathName file '.mat'],'GlobalD_2D','WeightedD_2D','FittedD_2D');
+    if any(FittedD_1D>0)
+        title('Diffusion Analysis in 2D');
+        aPlot1D = axes(fig,'Units','centimeters','Position',[9.5 1.25 6 6],'TickDir','out','Color','none');
+        plot(xd_1D,mean(D1Dmat,1),'b-');
+        hold on;
+        plot(xd_1D,mean(D1Dmat,1)+2*std(D1Dmat,[],1),'b--');
+        plot(xd_1D,mean(D1Dmat,1)-2*std(D1Dmat,[],1),'b--');
+        plot(xd_1D,mean(Fit1Dmat,1),'k-','LineWidth',1);
+        xlim([min(xd_1D) max(xd_1D)]);
+        ylim([0 1.8*max(mean(D1Dmat,1))]);
+        xlabel(['diffusion coefficient [' char(181) 'm' char(178) '/s]']);
+        ylabel('probabilty density');
+        text(aPlot1D,'Units','normalized','HorizontalAlignment','right','Position',[0.95 0.82],'String',...
+                     {['D(weighted)= ' val2str(mean(WeightedD_1D),2*std(WeightedD_1D)) char(181) 'm' char(178) '/s'],...
+                      ['D(global) = ' val2str(mean(GlobalD_1D),2*std(GlobalD_1D)) char(181) 'm' char(178) '/s'],...
+                      ['D(fitted) = ' val2str(mean(FittedD_1D),2*std(FittedD_1D)) char(181) 'm' char(178) '/s'],...
+                      ['N = ' num2str(nObj)]});
+        axes(fig,'Units','centimeters','Position',get(aPlot1D,'Position'),'Box','on','xtick',[],'ytick',[]);
+        axes(aPlot1D); 
+        title('Diffusion Analysis in 1D');
+        save([PathName file '.mat'],'WeightedD_1D','GlobalD_1D','FittedD_1D','-append');
+    end
+    saveas(fig,[PathName file '.pdf'],'pdf');
+    savefig(fig,[PathName file '.fig']);
+    delete(fig);
+end
+    
+function DiffusionMSD 
+global Molecule
+global Filament
+%define variable for square displacment and time difference
+sd_1D=[];
+sd_2D=[];
+tau=[];
+if ~isempty(Molecule)
+    %for every selected molecule
+    for n = find([Molecule.Selected]==1)
+        if isempty(Molecule(n).PathData)
+            Dis = [];
+        else
+            Dis = real(double(Molecule(n).PathData(:,4)));
+        end
+        [sd_2D,sd_1D,tau] = CalcSD(Molecule(n).Results,Dis,sd_2D,sd_1D,tau);
+    end
+end
+if ~isempty(Filament)
+    %for every selected filament
+    for n = find([Filament.Selected]==1)
+        if isempty(Filament(n).PathData)
+            Dis = [];
+        else
+            Dis = real(double(Filament(n).PathData(:,4)));
+        end
+        [sd_2D,sd_1D,tau] = CalcSD(Filament(n).Results,Dis,sd_2D,sd_1D,tau);
+    end
+end
+[FileName, PathName, FilterIndex] = uiputfile({'*.mat','MAT-file (*.mat)';'*.txt','TXT-File (*.txt)'},'Save FIESTA Mean Square Displacement',fShared('GetSaveDir'));
+if FileName ~= 0
+    fShared('SetSaveDir',PathName);
+    [file, ~] = strtok(FileName, '.');
+    for m=1:length(sd_2D)
+        MSD_2D(m,1)=mean(tau{m});
+        MSD_2D(m,2)=mean(sd_2D{m});
+        MSD_2D(m,3)=std(sd_2D{m})/sqrt(length(sd_2D{m}));
+        MSD_2D(m,4)=length(sd_2D{m});
+    end
+    N = MSD_2D(:,4);
+    idx = N<0.01*sum(N);
+    MSD_2D(idx,:) = [];
+    if isempty(sd_1D)
+        MSD_1D = 'Diffusion Analysis in 1D require path data. Use Path Statistics before Diffusion Analysis!';
+    else 
+        for m=1:length(sd_1D)
+            MSD_1D(m,1)=mean(tau{m});
+            MSD_1D(m,2)=mean(sd_1D{m});
+            MSD_1D(m,3)=std(sd_1D{m})/sqrt(length(sd_1D{m}));
+            MSD_1D(m,4)=length(sd_1D{m});
+        end
+        MSD_1D(idx,:) = [];
+    end
+    if FilterIndex==1
+        save([PathName file '.mat'],'MSD_2D','MSD_1D');
+    elseif FilterIndex==2
+        f = fopen([PathName file '.txt'],'w');
+        fprintf(f,'Diffusion Analysis in 2D\n');
+        fprintf(f,['Time[s]\tMSD[' char(181) 'm' char(178) ']\tError(mean)\tN\n']);
+        fprintf(f,'%f\t%f\t%f\t%f\n',MSD_2D');
+        if ~isempty(sd_1D)
+            fprintf(f,'\n');    
+            fprintf(f,'Diffusion Analysis in 1D\n');
+            fprintf(f,['Time[s]\tMSD[' char(181) 'm' char(178) ']\tError(mean)\tN\n']);
+            fprintf(f,'%f\t%f\t%f\t%f\n',MSD_1D');
+        end
+        fclose(f);
+    end
+    if isempty(sd_1D)
+        fig = figure('Units','centimeters','Position',[2 2 8 8],'Toolbar','none','MenuBar','none','DockControls','off',...
+                    'PaperUnits','centimeters','PaperSize',[8 8],'Color','w','PaperPositionMode','manual','PaperPosition',[0 0 8 8]);
+    else
+        fig = figure('Units','centimeters','Position',[2 2 16 8],'Toolbar','none','MenuBar','none','DockControls','off',...
+                    'PaperUnits','centimeters','PaperSize',[16 8],'Color','w','PaperPositionMode','manual','PaperPosition',[0 0 16 8]);
+    end
+    aPlot2D = axes(fig,'Units','centimeters','Position',[1.5 1.25 6 6],'TickDir','out','Color','none');
+    errorbar(MSD_2D(:,1),MSD_2D(:,2),MSD_2D(:,3),'Marker','s','MarkerEdgeColor','b','MarkerFaceColor','b','LineStyle','none');
+    f = fit(MSD_2D(:,1),MSD_2D(:,2),'poly1','Weights',MSD_2D(:,4));
+    hold on
+    x = [0 MSD_2D(:,1)'];
+    plot(x,f(x),'k-');
+    D = LinearRegressD(MSD_2D);
+    xlim([0 max(MSD_2D(:,1))]);
+    xlabel('time intervals [s]');
+    ylabel(['mean squared displacement [' char(181) 'm' char(178) ']']);
+    text(aPlot2D,'Units','normalized','HorizontalAlignment','right','Position',[0.95 0.2],'String',{'Weighted linear fit',[num2str(f.p1,2) '*x+' num2str(f.p2,2)],['D = ' num2str(f.p1/4,2) ' ' char(181) 'm' char(178) '/s'],'Linear Regression',['D = ' val2str(D(1),D(2)) ' ' char(181) 'm' char(178) '/s']});
+    axes(fig,'Units','centimeters','Position',get(aPlot2D,'Position'),'Box','on','xtick',[],'ytick',[]);
+    axes(aPlot2D); 
+    if ~isempty(sd_1D)
+        title('Diffusion Analysis in 2D');
+        aPlot1D = axes(fig,'Units','centimeters','Position',[9.5 1.25 6 6],'TickDir','out','Color','none');
+        errorbar(MSD_1D(:,1),MSD_1D(:,2),MSD_1D(:,3),'Marker','s','MarkerEdgeColor','b','MarkerFaceColor','b','LineStyle','none');
+        f = fit(MSD_1D(:,1),MSD_1D(:,2),'poly1','Weights',MSD_1D(:,4));
+        hold on
+        x = [0 MSD_1D(:,1)'];
+        plot(x,f(x),'k-');
+        D = LinearRegressD(MSD_1D);
+        xlim([0 max(MSD_2D(:,1))]);
+        xlabel('time intervals [s]');
+        ylabel(['mean squared displacement [' char(181) 'm' char(178) ']']);
+        text(aPlot1D,'Units','normalized','HorizontalAlignment','right','Position',[0.95 0.2],'String',{'Weighted linear fit',[num2str(f.p1,2) '*x+' num2str(f.p2,2)],['D = ' num2str(f.p1/4,2) ' ' char(181) 'm' char(178) '/s'],'Linear Regression',['D = ' val2str(D(1),D(2)) ' ' char(181) 'm' char(178) '/s']});
+        axes(fig,'Units','centimeters','Position',get(aPlot1D,'Position'),'Box','on','xtick',[],'ytick',[]);
+        axes(aPlot1D); 
+        title('Diffusion Analysis in 1D');
+    end
+    saveas(fig,[PathName file '.pdf'],'pdf');
+    savefig(fig,[PathName file '.fig']);
+    delete(fig);
+end
+
+function D = LinearRegressD(data)
+N = data(:,4);
+idx = N>0.01*sum(N);
+x = data(idx,1);
+y = data(idx,2);
+s = data(idx,3);
+delta = sum(1./s.^2)*sum(x.^2./s.^2)-(sum(x./s.^2))^2;
+b = 1/delta*(sum(1.^2./s.^2)*sum(x.*y./s.^2)-sum(x./s.^2)*sum(y./s.^2));
+db = sqrt(1/delta*sum(1.^2./s.^2));
+D=[b./4 db];
+    
+function str = val2str(val,err)
+rd = floor(log10(round(err,1,'significant')));
+if rd>=0
+    err = ceil(err);
+    val = round(val);
+    p = '%.0f';
+else
+    err = ceil(err*10^-rd)/10^-rd;
+    val = round(val,-rd);
+    p = ['%.' num2str(abs(rd)) 'f'];
+end
+str = [num2str(val,p) char([32 177 32]) num2str(err,p)];

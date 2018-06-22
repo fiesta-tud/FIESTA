@@ -45,15 +45,15 @@ function [ f, xb ] = evaluate( model, x )
       % we have to raise an error, because otherwise the jacobian is not defined
       error( 'MPICBG:FIESTA:DegeneratedFilament', 'Both end points of the filament lie exactly on top of each other' );
     end
-    ab = wb1(:,3) + wb2(:,3) + gb(:,3);
+    ab = - wb1(:,3) - wb2(:,3) + gb(:,3);
     tempb0 =  ( x(3) - x(1) ) .* ab ./ q;
     tempb1 = -( x(4) - x(2) ) .* ab ./ q;
 
     % add contributions to -jacobian
-    xb(:,1) = 2.0 .* (xg-x(1)) .* temp0b - gb(:,1) - wb1(:,1) + tempb1;
-    xb(:,2) = 2.0 .* (yg-x(2)) .* temp0b - gb(:,2) - wb1(:,2) + tempb0;
-    xb(:,3) = 2.0 .* (xg-x(3)) .* tempb - wb2(:,1) - tempb1;
-    xb(:,4) = 2.0 .* (yg-x(4)) .* tempb - wb2(:,2) - tempb0;
+    xb(:,1) = 2.0 .* (xg-x(1)) .* temp0b - gb(:,1) - wb1(:,1) - tempb1;
+    xb(:,2) = 2.0 .* (yg-x(2)) .* temp0b - gb(:,2) - wb1(:,2) - tempb0;
+    xb(:,3) = 2.0 .* (xg-x(3)) .* tempb - wb2(:,1) + tempb1;
+    xb(:,4) = 2.0 .* (yg-x(4)) .* tempb - wb2(:,2) + tempb0;
     xb(:,5) = temp0 .* temp1 .* w1 .* x(6) + temp .* temp3 .* w2 .* x(6) + gb(:,4);
     xb(:,6) = - w1 .* temp1 - w2 .* temp3 - (1.0-w1) .* g .* (1.0-w2);
 

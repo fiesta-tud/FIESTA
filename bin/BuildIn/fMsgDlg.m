@@ -114,3 +114,6 @@ end
 uiwait(hFig);
 delete(hFig);
 drawnow
+
+function doKeyPress(~,~)
+uiresume(gcbf);

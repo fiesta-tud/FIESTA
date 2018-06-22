@@ -30,7 +30,13 @@ function objects = ScanImage( image, params, idx )
   % apply scaling to input parameters
   params.fwhm_estimate = params.fwhm_estimate / params.scale; 
   params.creation_time = params.creation_time_vector(real(idx));
-
+  if ~isempty(params.drift)
+    drift = zeros(3,3,numel(params.drift));
+    for n = 1:numel(params.drift)
+        drift(:,:,n) = params.drift{n}(:,:,idx);
+    end
+    params.drift = drift;
+  end
   % initialize global error structure for counting certain events
   global error_events;
   if ~exist( 'error_events', 'var' ) || isempty( error_events )
@@ -71,7 +77,7 @@ function objects = ScanImage( image, params, idx )
 
     % interpolate data
     Log( 'interpolate data between points', params );
-    objects = InterpolateData( objects, pic, params );
+    objects = InterpolateData( objects, params );
     
     objects = orderfields(objects);
   end
@@ -173,7 +179,7 @@ function params = CheckParameters( params )
   end
   
   if ~isfield( params, 'short_object_threshold' )
-    params.short_object_threshold = 4 * params.reduce_fit_box * params.fwhm_estimate / params.scale / (2*sqrt(2*log(2)));;
+    params.short_object_threshold = 4 * params.reduce_fit_box * params.fwhm_estimate / params.scale / (2*sqrt(2*log(2)));
   end
     
 %   if ~isfield( params, 'eccentricity_threshold' )

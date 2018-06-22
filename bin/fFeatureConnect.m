@@ -17,18 +17,20 @@ end
 
 if StartFrame==0
     nObj=Config.FirstTFrame;
-    lObjects=Objects{nObj}.length(1,:);
-    pMol=1;
-    pFil=1;
-    for n=1:length(lObjects)
-        if lObjects(n)==0
-            MolTrack{pMol}(1)=nObj;
-            MolTrack{pMol}(2)=n;
-            pMol=pMol+1;
-        else
-            FilTrack{pFil}(1)=nObj;
-            FilTrack{pFil}(2)=n;
-            pFil=pFil+1;            
+    if ~isempty(Objects{nObj})
+        lObjects=Objects{nObj}.length(1,:);
+        pMol=1;
+        pFil=1;
+        for n=1:length(lObjects)
+            if lObjects(n)==0
+                MolTrack{pMol}(1)=nObj;
+                MolTrack{pMol}(2)=n;
+                pMol=pMol+1;
+            else
+                FilTrack{pFil}(1)=nObj;
+                FilTrack{pFil}(2)=n;
+                pFil=pFil+1;            
+            end
         end
     end
     return;

@@ -18,10 +18,7 @@ if isfield(Config,'DynamicFil')
         orig_region = params.bw_region;
     end
 end
-if isfield(Config,'TformChannel')
-    params.transform = Config.TformChannel;
-end
-
+params.drift = Config.Drift;
 params.bead_model=Config.Model;
 params.max_beads_per_region=Config.MaxFunc;
 params.scale=Config.PixSize;
@@ -63,11 +60,11 @@ else
 end
 params.display = 1;
 
-params.options = optimset( 'Display', 'off','UseParallel','never');
-params.options.MaxFunEvals = []; 
-params.options.MaxIter = [];
-params.options.TolFun = [];
-params.options.TolX = [];
+params.options = optimoptions(@lsqnonlin,'Display', 'off','UseParallel','never');
+% params.options.MaxFunEvals = []; 
+% params.options.MaxIter = [];
+% params.options.TolFun = [];
+% params.options.TolX = [];
 
 if ~isempty(TimeInfo) && ~isempty(TimeInfo{1}) 
     params.creation_time_vector = (TimeInfo{1}-TimeInfo{1}(1))/1000;
@@ -76,8 +73,8 @@ if ~isempty(TimeInfo) && ~isempty(TimeInfo{1})
     params.creation_time_vector(k) = params.creation_time_vector(k) + 24*60*60;
 end
 
-if strncmp(Config.TrackingServer,'local',5)
-    num_cores = str2double(Config.TrackingServer(6:end));
+if isempty(Config.TrackingServer) && Config.NumCores>0
+    num_cores = Config.NumCores;
     JobNr = -1;
 end
 if isinf(Config.LastFrame)
@@ -133,7 +130,6 @@ if Config.FirstTFrame>0
             return;
         end
     elseif JobNr==-1    
-        %parpool(num_cores);
         params.display = 0;
         dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
         [y,x,z] = size(Stack{1});
@@ -143,7 +139,7 @@ if Config.FirstTFrame>0
         end
         parallelprogressdlg('String',['Tracking on ' num2str(num_cores) ' cores'],'Max',Config.LastFrame-Config.FirstTFrame+1,'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
         try
-            parfor n=Config.FirstTFrame:Config.LastFrame
+            parfor (n=Config.FirstTFrame:Config.LastFrame,num_cores)
                 Objects{n}=ScanImage(cat(3,Stack{:,n}),params,n);
                 fSave(dirStatus,n);
             end
@@ -152,7 +148,6 @@ if Config.FirstTFrame>0
             return;
         end  
         parallelprogressdlg('close');
-        %delete(gcp);
     else
         h=progressdlg('String',sprintf('Tracking - Frame: %d',Config.FirstTFrame),'Min',Config.FirstTFrame-1,'Max',Config.LastFrame,'Cancel','on','Parent',hMainGui.fig);
         for n=Config.FirstTFrame:Config.LastFrame
@@ -210,31 +205,42 @@ catch
     fMsgDlg(['Directory not accessible - File saved in FIESTA directory: ' DirCurrent],'warn');
     save(fData,'Objects','Config');
 end
-if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.ConnectFil.NumberVerification>0
-    try
-        [MolTrack,FilTrack,abort]=fFeatureConnect(Objects,Config,JobNr);     
-    catch ME
-        save(fData,'ME','-append');
-        return;
-    end
-    if abort==1
-        return
+if ~isempty(Objects) 
+    MolTrack = [];
+    FilTrack = [];
+    if Config.ConnectMol.NumberVerification>0 && Config.ConnectFil.NumberVerification>0
+        try
+            [MolTrack,FilTrack,abort]=fFeatureConnect(Objects,Config,JobNr);     
+        catch ME
+            save(fData,'ME','-append');
+            return;
+        end
+        if abort==1
+            return
+        end
+    else
+        pMol=1;
+        pFil=1;
+        for n = 1:length(Objects)
+            lObjects = Objects{n}.length(1,:);
+            for m=1:length(lObjects)
+                if lObjects(m)==0
+                    MolTrack{pMol}(1)=n;
+                    MolTrack{pMol}(2)=m;
+                    pMol=pMol+1;    
+                else
+                    FilTrack{pFil}(1)=n;
+                    FilTrack{pFil}(2)=m;
+                    pFil=pFil+1;            
+                end
+            end
+        end
     end
     Molecule=[];
     Filament=[];
     Molecule=fDefStructure(Molecule,'Molecule');
     Filament=fDefStructure(Filament,'Filament');
     nMolTrack=length(MolTrack);
-
-    nChannel = Config.TformChannel{1}(3,3);
-    if length(Config.TformChannel)==1
-        T = Config.TformChannel{1};
-    else
-        T = Config.TformChannel{nChannel};
-    end
-    
-    T(3,3) = 1;
-   
     for n = 1:nMolTrack
         nData=size(MolTrack{n},1);
         Molecule(n).Name = ['Molecule ' num2str(n)];
@@ -244,8 +250,7 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
         Molecule(n).Visible = true;    
         Molecule(n).Drift = 0;            
         Molecule(n).PixelSize = Config.PixSize;  
-        Molecule(n).Channel = nChannel;
-        Molecule(n).TformMat = T;
+        Molecule(n).Channel = Config.Channel;
         Molecule(n).Color = [0 0 1];
         for j = 1:nData
             f = MolTrack{n}(j,1);
@@ -259,8 +264,21 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             Molecule(n).Results(j,8) = Objects{f}.height(1,m);                
             Molecule(n).Results(j,9) = single(sqrt((Objects{f}.com_x(2,m))^2+(Objects{f}.com_y(2,m))^2));                        
             if size(Objects{f}.data{m},2)==1
-                Molecule(n).Results(j,10:11) = Objects{f}.data{m}';                
-                Molecule(n).Results(j,12) = single(Objects{f}.orientation(1,m));                
+                Molecule(n).Results(j,10:11) = Objects{f}.data{m}';      
+                if j == 1
+                    ref_vec = Objects{f}.orientation(:,m)';
+                    Molecule(n).Results(j,12) = single(atan(ref_vec(2)/ref_vec(1)));
+                else
+                    norm_vec = Molecule{f}.orientation(:,m)';
+                    dang = acos( norm_vec(1)*ref_vec(1)+norm_vec(2)*ref_vec(2) );
+                    if dang>pi/2
+                        dang = dang-pi;
+                        ref_vec = - norm_vec;
+                    else
+                        ref_vec = norm_vec;
+                    end
+                    Molecule(n).Results(j,12) = single(Molecule(n).Results(j-1,12)+dang);
+                end         
                 Molecule(n).Type = 'stretched';
                 Molecule(n).Results(j,13) = 0; 
             elseif size(Objects{f}.data{m},2)==3
@@ -269,7 +287,19 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
                 Molecule(n).Results(j,13) = 0;
             elseif size(Objects{f}.data{m},2)==2
                 Molecule(n).Results(j,10:11) = Objects{f}.data{m}(2,:);   
-                Molecule(n).Results(j,12) = single(Objects{f}.orientation(1,m));  
+                if j == 1
+                    ref_vec = Objects{f}.orientation(:,m)';
+                    Molecule(n).Results(j,12) = single(atan(-ref_vec(2)/ref_vec(1)));
+                else
+                    norm_vec = Objects{f}.orientation(:,m)';
+                    dang = atan2(ref_vec(2)*norm_vec(1)-ref_vec(1)*norm_vec(2),ref_vec(1)*norm_vec(1)+ref_vec(2)*norm_vec(2));
+                    if abs(dang)>pi/2
+                        norm_vec = - norm_vec;
+                        dang = atan2(ref_vec(2)*norm_vec(1)-ref_vec(1)*norm_vec(2),ref_vec(1)*norm_vec(1)+ref_vec(2)*norm_vec(2));
+                    end
+                    ref_vec = norm_vec;
+                    Molecule(n).Results(j,12) = single(Molecule(n).Results(j-1,12)+dang);
+                end
                 Molecule(n).Type = 'diatom';
                 Molecule(n).Results(j,13) = 0;
             else
@@ -281,7 +311,7 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             else
                 Molecule(n).TrackingResults{j} = [];
             end       
-            
+
         end
         Molecule(n).Results(:,6) = fDis(Molecule(n).Results(:,3:5));
     end
@@ -298,8 +328,7 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
         Filament(n).Visible=true;    
         Filament(n).Drift=0;    
         Filament(n).PixelSize = Config.PixSize;   
-        Filament(n).Channel = nChannel;
-        Filament(n).TformMat = T;
+        Filament(n).Channel = Config.Channel;
         Filament(n).Color=[0 0 1];
         for j=1:nData
             f = FilTrack{n}(j,1);
@@ -310,11 +339,26 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             Filament(n).Results(j,4) = Objects{f}.center_y(m);
             Filament(n).Results(j,5) = NaN;
             Filament(n).Results(j,7) = Objects{f}.length(1,m);
-            Filament(n).Results(j,8) = Objects{f}.height(1,m);                
-            Filament(n).Results(j,9) = single(mod(Objects{f}.orientation(1,m),2*pi));
-            Filament(n).Results(j,10) = 0;
+            Filament(n).Results(j,8) = Objects{f}.height(1,m);  
             Filament(n).Data{j} = [Objects{f}.data{m}(:,1:2) ones(size(Objects{f}.data{m},1),1)*NaN Objects{f}.data{m}(:,3:end)];
-            Filament(n).PosCenter(j,1:3)=[Filament(n).Results(j,3:4) NaN];  
+            if j == 1
+                ref_vec = Objects{f}.orientation(:,m)';
+                Filament(n).Results(j,9) = single(atan(-ref_vec(2)/ref_vec(1)));
+            else
+                norm_vec = Objects{f}.orientation(:,m)';
+                dang = atan2(ref_vec(2)*norm_vec(1)-ref_vec(1)*norm_vec(2),ref_vec(1)*norm_vec(1)+ref_vec(2)*norm_vec(2));
+                if abs(dang)>pi/2
+                    Filament(n).Data{j} = flipud(Filament(n).Data{j});
+                    norm_vec = - norm_vec;
+                    dang = atan2(ref_vec(2)*norm_vec(1)-ref_vec(1)*norm_vec(2),ref_vec(1)*norm_vec(1)+ref_vec(2)*norm_vec(2));
+                end
+                ref_vec = norm_vec;
+                Filament(n).Results(j,9) = single(Filament(n).Results(j-1,9)+dang);
+            end
+            Filament(n).Results(j,10) = 0;
+            Filament(n).PosStart(j,1:3)=Filament(n).Data{j}(1,1:3);
+            Filament(n).PosCenter(j,1:3)=Filament(n).Results(j,3:5);  
+            Filament(n).PosEnd(j,1:3)=Filament(n).Data{j}(end,1:3);
             if Config.OnlyTrack.IncludeData == 1
                 Filament(n).TrackingResults{j} = Objects{f}.points{m};
             else
@@ -322,7 +366,7 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
             end       
         end
         
-        Filament(n) = fAlignFilament(Filament(n),Config);
+        Filament(n) = fAlignFilament(Filament(n),Config);   
         
         if Config.ConnectFil.DisregardEdge && ~isempty(Stack)                                          
             xv = [5 5 sStack(2)-4 sStack(2)-4]*Config.PixSize;
@@ -359,7 +403,3 @@ if ~isempty(Objects) && Config.ConnectMol.NumberVerification>0 && Config.Connect
     end
     clear Molecule Filament Objects Config;
 end
-
-function fSave(dirStatus,frame)
-fname = [dirStatus 'frame' int2str(frame) '.mat'];
-save(fname,'frame');

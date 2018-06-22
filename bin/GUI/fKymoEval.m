@@ -60,7 +60,7 @@ if ~isempty(Stack)
         [I,~,~]=fStackRead([filpath filfile]);
         hKymoEval.ref = I{1};
     else
-        hKymoEval.ref = maxImage;
+        hKymoEval.ref = maxImage(:,:,1);
     end
     hKymoEval.Line = [];
     hKymoEval.cp = [];
@@ -438,6 +438,7 @@ if length(hKymoEval.Kymo)==length(hKymoEval.Line)
     hKymoEval.Line = [];
     set(hKymoEval.hTools,'SelectedObject',hKymoEval.bSingle);
     maxImage = getappdata(hMainGui.fig,'MaxImage');
+    maxImage = maxImage(:,:,1);
     mContrast = round(mean2(maxImage)+3*std2(maxImage));  
     PixMin = min(min(maxImage));
     PixMax = max(max(maxImage));

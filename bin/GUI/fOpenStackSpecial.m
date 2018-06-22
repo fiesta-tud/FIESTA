@@ -200,11 +200,21 @@ end
 function ChooseFile(~,o)
 global FiestaDir;
 hOpenSpecial = getappdata(0,'hOpenSpecial');
-[FileName,PathName] = uigetfile({'*.stk;*.nd2;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+[FileName,PathName] = uigetfile({'*.stk;*.nd2;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack,'MultiSelect','on'); %open dialog for *.stk files
 if PathName~=0
     FiestaDir.Stack=PathName;
     n = str2double(get(o.Source,'Tag'));
-    set(hOpenSpecial.pSeparate.eChannel(n),'String',FileName,'UserData',PathName);
+    if ~iscell(FileName)
+        FileName ={FileName};
+    end
+    if length(FileName)+n>5
+        e = 4-n+1;
+    else
+        e = length(FileName);
+    end
+    for m = 1:e
+        set(hOpenSpecial.pSeparate.eChannel(m+n-1),'String',FileName{m},'UserData',PathName);
+    end
 end
 
 function LoadStack(~,~)

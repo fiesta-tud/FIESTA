@@ -83,11 +83,6 @@ if isfield(Object,'Channel')==0
         Object(i).Channel=1;
     end
 end
-if isfield(Object,'TformMat')==0
-    for i=1:nObj    
-        Object(i).TformMat=[1 0 0; 0 1 0; 0 0 1];
-    end
-end
 if isfield(Object,'Color')==0
     for i=1:nObj 
         Object(i).Color=[0 0 1];
@@ -196,6 +191,9 @@ if isfield(Object,'Config')==1
 end
 if isfield(Object,'DriftControl')==1
     Object=rmfield(Object,'DriftControl');
+end
+if isfield(Object,'TformMat')==1
+    Object=rmfield(Object,'TformMat');
 end
 if isfield(Object,'plot1')==1
     Object=rmfield(Object,'plot1');

@@ -290,6 +290,7 @@ setappdata(0,'hVelocityStatsGui',hVelocityStatsGui);
 Calculate(hVelocityStatsGui)
 
 function vel=CalcVelocity2D(T,XYZ)
+global Config;
 nData=size(XYZ,1);
 if any(isnan(XYZ(:,3)))
     XYZ(:,3)=0;
@@ -298,7 +299,7 @@ if nData>1
     vel=zeros(1,nData);
     vel(1)=sqrt(sum((XYZ(2,:)-XYZ(1,:)).^2))/(T(2) - T(1));
     vel(nData)=sqrt(sum((XYZ(nData,:)-XYZ(nData-1,:)).^2))/(T(nData) - T(nData-1));
-    for i=2:nData-1
+    parfor (i=2:nData-1,Config.NumCores)
        vel(i)= (sqrt(sum((XYZ(i+1,:)-XYZ(i,:)).^2)) + sqrt(sum((XYZ(i,:)-XYZ(i-1,:)).^2)))/(T(i+1) - T(i-1));
     end
 else
@@ -317,12 +318,13 @@ else
 end
 
 function vel = Fit1D(T,D,f)
+global Config;
 nData = length(D);
 T = double(T);
 D = double(D);
 if nData>1
     vel = zeros(1,nData);
-    for n = 1:nData
+    parfor (n = 1:nData,Config.NumCores)
         p = fit(T(max([1 n-f]):min([nData n+f])),D(max([1 n-f]):min([nData n+f])),'poly1');
         vel(n) = p.p1;
     end

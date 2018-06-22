@@ -120,10 +120,10 @@ hMenu.mFindMoving = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''FindMovi
                            'Label','Find all Moving objects','Tag','mFindMoving','Separator','on','UserData','moving');     
                        
 hMenu.mFindStatic = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''FindMoving'',getappdata(0,''hMainGui''));','Enable','off',...
-                           'Label','Find all Static objects','Tag','mFindStatic','UserData','static');   
+                           'Label','Find all static objects','Tag','mFindStatic','UserData','static');   
                        
-hMenu.mFindDrift = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''FindDrift'',getappdata(0,''hMainGui''));','Enable','off',...
-                           'Label','Find Molecules for Drift Correction','Tag','mFindDrift','UserData','drift');                          
+hMenu.mFindReference = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''FindReference'',getappdata(0,''hMainGui''));','Enable','off',...
+                           'Label','Find best reference molecules','Tag','mFindReference','UserData','reference');                          
                        
 hMenu.mMergeTracks = uimenu('Parent',hMenu.mEdit,'Callback','fShared(''MergeTracks'',getappdata(0,''hMainGui''));','Enable','off',...
                     'Label','Join selected tracks','Tag','mMergeTracks','Accelerator','J','Separator','on');
@@ -138,7 +138,7 @@ hMenu.mDeleteTracks = uimenu('Parent',hMenu.mEdit,'Callback','fShared(''DeleteTr
 hMenu.mView = uimenu('Parent',hMainGui.fig,'Label','View','Tag','mView');
 
 hMenu.mFrame = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',getappdata(0,''hMainGui''),[]);','Enable','off',...
-                        'Label','Current Frame','Tag','mFrame');
+                        'Label','Current frame','Tag','mFrame');
                     
 hMenu.mMaximum = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',getappdata(0,''hMainGui''),-1);','Enable','off',...
                         'Label','Maximum projection','Tag','mMaximum');
@@ -150,16 +150,22 @@ hMenu.mZProjection = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',
                             'Label','Z-Projection','Tag','mZProjection');     
                         
 hMenu.mObjProjection = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',getappdata(0,''hMainGui''),-4);','Enable','off',...
-                            'Label','Objects projection','Tag','mObjProjection');              
+                            'Label','Objects projection','Tag','mObjProjection');     
+                        
+hMenu.mApplyCorrections = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''ApplyCorrections'');','Enable','off',...
+                            'Label','Apply corrections to stack','Tag','mApplyCorrections','Separator','on','Checked', 'off');
+                        
+hMenu.mShowCorrections = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''ShowCorrections'');','Enable','off',...
+                            'Label','Show corrections','Tag','mShowCorrections','Checked', 'off');    
                         
 hMenu.mCorrectStack = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''CorrectStack'');','Enable','off',...
-                            'Label','Correct Stack (Drift and/or Color Offset)','Tag','mCorrectStack','Separator','on','Checked', 'off');        
+                            'Label','Permanently apply corrections','Tag','mCorrectStack','Checked', 'off');        
                     
 hMenu.mColorOverlay = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''ColorOverlay'');','Enable','off',...
-                                'Label','Color-Overlay','Tag','mColorOverlay','Separator','on');  
+                                'Label','Color-overlay','Tag','mColorOverlay','Separator','on');  
                             
 hMenu.mExport = uimenu('Parent',hMenu.mView,'Callback','fExportViewGui(''Create'');','Enable','off',...
-                       'Label','Export Current View','Tag','mExport','Separator','on');
+                       'Label','Export current view','Tag','mExport','Separator','on');
                    
 %create Options menu
 hMenu.mOptions = uimenu('Parent',hMainGui.fig,'Label','Options','Tag','mOptions');
@@ -168,47 +174,22 @@ hMenu.mConfig = uimenu('Parent',hMenu.mOptions,'Callback','fConfigGui(''Create''
                        'Label','Configuration','Tag','mConfig');
                    
 hMenu.mLoadConfig = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''LoadConfig'',getappdata(0,''hMainGui''));',...
-                       'Label','Load Configuration','Tag','mLoadConfig','Separator','on');
+                       'Label','Load configuration','Tag','mLoadConfig','Separator','on');
 
 hMenu.mSaveConfig = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''SaveConfig'',getappdata(0,''hMainGui''));',...
-                           'Label','Save Configuration','Tag','mSaveConfig');
+                           'Label','Save configuration','Tag','mSaveConfig');
 
 hMenu.mSetDefConfig = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''SetDefaultConfig'',getappdata(0,''hMainGui''));',...
-                             'Label','Set Default Configuration','Tag','mSetDefConfig','Separator','on');
+                             'Label','Set default configuration','Tag','mSetDefConfig','Separator','on');
 
-hMenu.mSetDrift = uimenu('Parent',hMenu.mOptions,'Callback','fShared(''SetDrift'',getappdata(0,''hMainGui''));','Enable','off',...
-                      'Label','Set drift control','Tag','mSetDrift','Separator','on');
+hMenu.mSetReference = uimenu('Parent',hMenu.mOptions,'Callback','fShared(''SetReference'',getappdata(0,''hMainGui''));','Enable','off',...
+                      'Label','Set as reference','Tag','mSetReference','Separator','on');
 
-hMenu.mSaveDrift = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''SaveDrift'',getappdata(0,''hMainGui''));','Enable','off',...
-                          'Label','Save Drift','Tag','mSaveDrift');
+hMenu.mSaveCorrections = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''SaveCorrections'',getappdata(0,''hMainGui''));','Enable','off',...
+                          'Label','Save corrections','Tag','mSaveCorrections');
                       
-hMenu.mLoadDrift = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''LoadDrift'',getappdata(0,''hMainGui''));',...
-                          'Label','Load Drift','Tag','mLoadDrift');
-           
-%create Options menu                      
-hMenu.mOffsetMap = uimenu('Parent',hMainGui.fig,'Label','Offset Map','Tag','mOffsetMap');
-
-hMenu.mAlignChannels = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''AlignCheck'');','Enable','off',...
-                                'Label','Align Channels','Tag','mAlignChannels');
-                            
-hMenu.mCreateOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''CreateOffsetMap'');',...
-                              'Label','Create Offset Map','Tag','mCreateOffsetMap','Enable','off','Separator','on');  
-                          
-hMenu.mShowOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''Show'');',...
-                              'Label','Show Offset Map','Tag','mShowOffsetMap','Enable','off');  
-                          
-hMenu.mApplyOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''Apply'');',...
-                              'Label','Apply Offset Map','Tag','mApplyOffsetMap','Enable','off');  
-                        
-hMenu.mSaveOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''Save'',getappdata(0,''hMainGui''));',...
-                            'Label','Save Offset Map','Tag','mSaveOffsetMap','Enable','off','Separator','on');  
-                        
-hMenu.mLoadOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''Load'',getappdata(0,''hMainGui''));',...
-                            'Label','Load Offset Map','Tag','mLoadOffsetMap');       
-                        
-hMenu.mClearOffsetMap = uimenu('Parent',hMenu.mOffsetMap,'Callback','fMenuOffsetMap(''Clear'');',...
-                            'Label','Clear Offset Map','Tag','mClearOffsetMap','Enable','off','Separator','on');  
-                        
+hMenu.mLoadCorrections = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions(''LoadCorrections'',getappdata(0,''hMainGui''));',...
+                          'Label','Load corrections','Tag','mLoadCorrections');                       
                         
 %create Tools menu
 hMenu.mTools = uimenu('Parent',hMainGui.fig,'Label','Tools','Tag','mTools');
@@ -250,10 +231,13 @@ hMenu.mPathStats = uimenu('Parent',hMenu.mStats,'Callback','fPathStatsGui(''Crea
                             'Label','Path Statistics','Tag','PathStats');
                         
 hMenu.mVelocityStats = uimenu('Parent',hMenu.mStats,'Callback','fVelocityStatsGui(''Create'');',...
-                             'Label','Velocity Statistics','Tag','mVelocityStats');                        
+                             'Label','Velocity Statistics','Tag','mVelocityStats');    
+                         
+hMenu.mMotilityParameters = uimenu('Parent',hMenu.mStats,'Callback','fEstimateMotilityParamsGui(''Create'');',...
+                                 'Label','Estimate Motility Parameters','Tag','mMotilityParameters');  
                         
-hMenu.mMSD = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''MSD'');',...
-                    'Label','Mean square displacement','Tag','mMSD');            
+hMenu.mDiffusionAnalysis = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''DiffusionAnalysis'');',...
+                    'Label','Diffusion Analysis (CVE/MSD)','Tag','mDiffusionAnalysis');            
                 
 hMenu.mAverageFilament = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''AverageFilament'');',...
                     'Label','Average Filaments','Tag','mAverageFilament ');    
@@ -430,8 +414,8 @@ hMenu.ListMol.Mark.mCyan = uimenu('Parent',hMenu.ListMol.mMarkSelection,'Callbac
 hMenu.ListMol.Mark.mPink = uimenu('Parent',hMenu.ListMol.mMarkSelection,'Callback','fMenuContext(''MarkSelection'');',...
                                   'Label','Pink','Tag','mPink ','UserData',[1 0.5 0.5]);          
                             
-hMenu.ListMol.mSetDrift = uimenu('Parent',hMenu.ctListMol,'Callback','fShared(''SetDrift'',getappdata(0,''hMainGui''));',...
-                                'Label','Set as Drift Control','Tag','mSetDrift','Separator','on');
+hMenu.ListMol.mSetReference = uimenu('Parent',hMenu.ctListMol,'Callback','fShared(''SetReference'',getappdata(0,''hMainGui''));',...
+                                'Label','Set as reference','Tag','mSetReference','Separator','on');
                             
 hMenu.ListMol.mMerge = uimenu('Parent',hMenu.ctListMol,'Callback','fShared(''MergeTracks'',getappdata(0,''hMainGui''));',...
                                 'Label','Join selected tracks','Separator','on','Tag','mMergeMol','UserData','Molecule');

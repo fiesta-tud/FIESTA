@@ -86,11 +86,11 @@ for i=1:m
                       type(ob(1))=0;
                    end
 
-                   for i=1:length(i1)
-                       if touched(i1(i))==0
-                          touched(i1(i))=1;
-                          ind=[ind i1(i)];   
-                          class(i1(i))=no;
+                   for j=1:length(i1)
+                       if touched(i1(j))==0
+                          touched(i1(j))=1;
+                          ind=[ind i1(j)];   
+                          class(i1(j))=no;
                        end                    
                    end
                 end

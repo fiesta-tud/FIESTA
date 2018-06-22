@@ -38,8 +38,8 @@ switch (func)
         Split(varargin{1});          
     case 'SelectAll'
         SelectAll(varargin{1});          
-    case 'Drift'
-        Drift(varargin{1});
+    case 'Correction'
+        Correction(varargin{1});
     case 'XAxisList'
         XAxisList(varargin{1});        
     case 'CheckYAxis2'
@@ -92,6 +92,10 @@ else
 end
 hDataGui.idx=idx;
 h=findobj('Tag','hDataGui');
+if numel(h)>1
+    delete(h);
+    h = [];
+end
 [lXaxis,lYaxis]=CreatePlotList(Object,Type);
 if isempty(h)
     hDataGui.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','MenuBar','none','Name',Object.Name,...
@@ -135,10 +139,7 @@ if isempty(h)
                               'String',Object.Comments,'Style','edit','Tag','eComments','BackgroundColor','white');
                           
     hDataGui.tIndex = uicontrol('Parent',hDataGui.fig,'Units','normalized','FontSize',10,'HorizontalAlignment','left',...
-                                'Position',[0.02 0.93 0.1 0.02],'String',['Index: ' num2str(idx)],'Style','text','Tag','tIndex','BackgroundColor',c);   
-                    
-    hDataGui.cAligned = uicontrol('Parent',hDataGui.fig,'Units','normalized','Position',[0.13 0.93 0.1 0.02],'TooltipString','Whether the object has been color aligned',...
-                                  'String','Aligned','Style','checkbox','BackgroundColor',c,'Tag','cAligned','Value',~(Object.TformMat(3,3)==1),'Enable','inactive');   
+                                'Position',[0.02 0.93 0.1 0.02],'String',['Index: ' num2str(idx)],'Style','text','Tag','tIndex','BackgroundColor',c);                       
     
     hDataGui.tChannel = uicontrol('Parent',hDataGui.fig,'Units','normalized','FontSize',10,'HorizontalAlignment','left',...
                                 'Position',[0.24 0.93 0.06 0.02],'String','Channel:','Style','text','Tag','tChannel','BackgroundColor',c);  
@@ -158,8 +159,8 @@ if isempty(h)
     hDataGui.bNext = uicontrol('Parent',hDataGui.fig,'Units','normalized','Callback','fDataGui(''Navigation'',1);',...
                              'Position',[0.24 0.89 0.1 0.03],'String','Next','Tag','bNext','Enable',eNext);
 
-    hDataGui.cDrift = uicontrol('Parent',hDataGui.fig,'Units','normalized','Callback','fDataGui(''Drift'',getappdata(0,''hDataGui''));',...
-                                'Position',[0.02 0.855 0.12 0.02],'String','Correct for Drift','Style','checkbox','BackgroundColor',c,'Tag','cDrift','Value',Object.Drift);
+    hDataGui.cCorrection = uicontrol('Parent',hDataGui.fig,'Units','normalized','Callback','fDataGui(''Correction'',getappdata(0,''hDataGui''));',...
+                                'Position',[0.02 0.855 0.12 0.02],'String','Apply corrections','Style','checkbox','BackgroundColor',c,'Tag','cCorrection','Value',Object.Drift);
 
     hDataGui.tReference = uicontrol('Parent',hDataGui.fig,'Units','normalized','FontSize',10,'HorizontalAlignment','left',...
                                   'Position',[0.16 0.855 0.1 0.02],'String','Reference Point:','Style','text','Tag','tReference','BackgroundColor',c);
@@ -279,11 +280,10 @@ else
     set(hDataGui.tIndex,'String',['Index: ' num2str(idx)]);
     set(hDataGui.bPrevious,'Enable',ePrevious);
     set(hDataGui.bNext,'Enable',eNext);
-    set(hDataGui.cDrift,'Value',Object.Drift);
+    set(hDataGui.cCorrection,'Value',Object.Drift);
     set(hDataGui.eChannel,'String',num2str(Object.Channel));
     set(hDataGui.lReference,'Value', fGetRefPoint(Object));
     set(hDataGui.eComments,'String', Object.Comments,'ForegroundColor','k','HorizontalAlignment','left','Enable','on','ButtonDownFcn','');
-    set(hDataGui.cAligned,'Value', ~(Object.TformMat(3,3)==1));
     set(hDataGui.gColor,'SelectedObject',findobj('UserData',Object.Color,'Parent',hDataGui.gColor));
 
     x=get(hDataGui.lXaxis,'Value');
@@ -598,19 +598,22 @@ if x<length(XList.data)
             end
         end
         if Dis>2*Object.PixelSize     
-            n(1) = find(Object.Results(:,6)<Dis/4,1,'last');
-            n(2) = find(Object.Results(:,6)<Dis/2,1,'last');
-            n(3) = find(Object.Results(:,6)<3*Dis/4,1,'last');
-            n(4) = size(Object.Results,1);     
-            VecX=[Object.Results(n(1),3) Object.Results(n(2),3) Object.Results(n(3),3)]-min(XPlot);
-            VecY=[Object.Results(n(1),4) Object.Results(n(2),4) Object.Results(n(3),4)]-min(YPlot{1});                    
-            VecU=[mean(Object.Results(n(1)+1:n(2),3)) mean(Object.Results(n(2)+1:n(3),3)) mean(Object.Results(n(3)+1:n(4),3))]-min(XPlot);
-            VecV=[mean(Object.Results(n(1)+1:n(2),4)) mean(Object.Results(n(2)+1:n(3),4)) mean(Object.Results(n(3)+1:n(4),4))]-min(YPlot{1});
-            U=(VecU-VecX)./sqrt((VecU-VecX).^2+(VecV-VecY).^2);
-            V=(VecV-VecY)./sqrt((VecU-VecX).^2+(VecV-VecY).^2);    
-            for m = 1:3
-                fill(hDataGui.aPlot,[VecX(m)+Dis/15*U(m) VecX(m)+Dis/30*V(m) VecX(m)-Dis/30*V(m)]/xscale,[VecY(m)+Dis/15*V(m) VecY(m)-Dis/30*U(m) VecY(m)+Dis/30*U(m)]/yscale,[0.8 0.8 0.8],'EdgeColor','none');
-            end   
+            try
+                n(1) = find(Object.Results(:,6)<Dis/4,1,'last');
+                n(2) = find(Object.Results(:,6)<Dis/2,1,'last');
+                n(3) = find(Object.Results(:,6)<3*Dis/4,1,'last');
+                n(4) = size(Object.Results,1);     
+                VecX=[Object.Results(n(1),3) Object.Results(n(2),3) Object.Results(n(3),3)]-min(XPlot);
+                VecY=[Object.Results(n(1),4) Object.Results(n(2),4) Object.Results(n(3),4)]-min(YPlot{1});                    
+                VecU=[mean(Object.Results(n(1)+1:n(2),3)) mean(Object.Results(n(2)+1:n(3),3)) mean(Object.Results(n(3)+1:n(4),3))]-min(XPlot);
+                VecV=[mean(Object.Results(n(1)+1:n(2),4)) mean(Object.Results(n(2)+1:n(3),4)) mean(Object.Results(n(3)+1:n(4),4))]-min(YPlot{1});
+                U=(VecU-VecX)./sqrt((VecU-VecX).^2+(VecV-VecY).^2);
+                V=(VecV-VecY)./sqrt((VecU-VecX).^2+(VecV-VecY).^2);    
+                for m = 1:3
+                    fill(hDataGui.aPlot,[VecX(m)+Dis/15*U(m) VecX(m)+Dis/30*V(m) VecX(m)-Dis/30*V(m)]/xscale,[VecY(m)+Dis/15*V(m) VecY(m)-Dis/30*U(m) VecY(m)+Dis/30*U(m)]/yscale,[0.8 0.8 0.8],'EdgeColor','none');
+                end   
+            catch
+            end
         end
         
         XPlot=XPlot-min(XPlot);
@@ -1008,11 +1011,15 @@ end
 
 function Close(hObject,eventdata) %#ok<INUSD>
 hDataGui=getappdata(0,'hDataGui');
-hDataGui.idx=0;
-setappdata(0,'hDataGui',hDataGui);
-set(hDataGui.fig,'Visible','off','WindowStyle','normal');
-fShared('ReturnFocus');
-%fShow('Tracks');
+try
+    hDataGui.idx=0;
+    setappdata(0,'hDataGui',hDataGui);
+    set(hDataGui.fig,'Visible','off','WindowStyle','normal');
+    fShared('ReturnFocus');
+    fShow('Tracks');
+catch
+    delete(hDataGui.fig);
+end
 
 
 function DeletePoints(hDataGui)
@@ -1081,19 +1088,10 @@ global Molecule;
 hDataGui=getappdata(0,'hDataGui');
 Object = getappdata(hDataGui.fig,'Object');
 if Object.Drift==1
-    fMsgDlg({'This track has been drift corrected, therefore',' changing in channel might yield corrupt results.','','Undo drift correction to set channel for this track!'},'warn');
+    fMsgDlg({'This track has been corrected, therefore',' changing in channel might yield corrupt results.','','Undo correction to set channel for this track!'},'warn');
     set(hDataGui.eChannel,'String',num2str(Object.Channel));
 else
     hMainGui=getappdata(0,'hMainGui');
-    set(hMainGui.Menu.mAlignChannels,'Checked','off');
-    Molecule = fTransformCoord(Molecule,1,0);
-    Filament = fTransformCoord(Filament,1,1);
-    if strcmp(hDataGui.Type,'Molecule')==1
-        Object = fTransformCoord(Object,1,0);
-    else
-        Object = fTransformCoord(Object,1,1);
-    end
-    fShared('UpdateMenu',hMainGui);   
     Object.Channel = str2double(get(hDataGui.eChannel,'String'));
     if isnan(Object.Channel) 
         Object.Channel = 1;
@@ -1184,43 +1182,15 @@ if sum(Check)<length(Check)
 end
 ReturnFocus([],[]);
 
-function Drift(hDataGui)
+function Correction(hDataGui)
 global Molecule;
 global Filament;
 Object=getappdata(hDataGui.fig,'Object');
 hMainGui=getappdata(0,'hMainGui');
 Drift=getappdata(hMainGui.fig,'Drift');
-if length(Drift)>=Object.Channel && ~isempty(Drift{Object.Channel})
-    Drift = Drift{Object.Channel};
+if numel(Drift) >= Object.Channel && ~isempty(Drift{Object.Channel})
     Check = getappdata(hDataGui.fig,'Check');
-    
-    if get(hDataGui.cDrift,'Value')==1
-        t=-1;
-    else
-        t=1;
-    end
-    nData=size(Object.Results,1);
-    for i=1:nData
-        k=find(Drift(:,1)==Object.Results(i,1));
-        if length(k)==1
-            Object.Results(i,3:5)=Object.Results(i,3:5)+t*Drift(k,2:4);
-            if any(isnan(Drift(:,4)))
-                Object.Results(i,9) = Object.Results(i,9) - t* norm(Drift(k,5:6));    
-            else
-                Object.Results(i,9) = Object.Results(i,9) - t* norm(Drift(k,4:7));
-            end
-            if isfield(Object,'PosCenter')
-                Object.PosStart(i,:) = Object.PosStart(i,:) + t*Drift(k,2:4);
-                Object.PosCenter(i,:) = Object.PosCenter(i,:) + t*Drift(k,2:4);
-                Object.PosEnd(i,:) = Object.PosEnd(i,:) + t*Drift(k,2:4);
-                Object.Data{i}(:,1) = Object.Data{i}(:,1) + t*Drift(k,2);
-                Object.Data{i}(:,2) = Object.Data{i}(:,2) + t*Drift(k,3);  
-                Object.Data{i}(:,3) = Object.Data{i}(:,3) + t*Drift(k,4);  
-            end
-        end
-    end
-    Object.Results(:,6)=fDis(Object.Results(:,3:5));
-    Object.Drift=get(hDataGui.cDrift,'Value');
+    Object = fCorrectPos(Object,Drift{Object.Channel},get(hDataGui.cCorrection,'Value'));
     if strcmp(hDataGui.Type,'Molecule')==1
         Molecule(hDataGui.idx)=Object;
     else
@@ -1438,6 +1408,9 @@ else
     lYaxis(n).units{k+1}='[nm]';
     lYaxis(n).data{k+1}=[];
 end
+lYaxis(n).list{k+2}='z-position';
+lYaxis(n).units{k+2}='[nanometer]';
+lYaxis(n).data{k+2}=[];
 
 function CreateHistograms(hDataGui)
 Object=getappdata(hDataGui.fig,'Object');
@@ -1509,6 +1482,19 @@ else
     x=fix(min(Len)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Len)/barwidth)*barwidth+barwidth;
     num = hist(Len,x);
     lYaxis(n).data{k+1}=[x' num'];
+end
+
+
+Z=Object.Results(:,5);
+if all(isnan(Z)) 
+    total=(max(Z)-min(Z))/15;
+    [~,t]=min(abs(total-barchoice));
+    barwidth=barchoice(t(1));
+    x=fix(min(Z)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Z)/barwidth)*barwidth+barwidth;
+    h = histogram(Z,x);
+    lYaxis(n).data{k+2}=[x' num'];
+else
+    lYaxis(n).data{k+2} = [];
 end
 set(hDataGui.lYaxis,'UserData',lYaxis);
 
@@ -1660,9 +1646,6 @@ end
 if Object.Drift == 1
     fMsgDlg('Not possible with Drift corrected tracks','error');
     return;
-elseif ~(Object.TformMat(3,3)==1)
-    fMsgDlg('Not possible with aligned tracks (undo offset correstion)','error');
-    return;
 end
 answer = fInputDlg({'Enter starting frame','Enter last frame'},{num2str(Object.Results(1,1)),num2str(Object.Results(end,1))});
 if length(answer)>1
@@ -1675,7 +1658,7 @@ if length(answer)>1
     fitframes = fitframes(~k);
     if ~isempty(fitframes)
         params.dynamicfil = 0;
-        params.transform = hMainGui.Values.TformChannel{Object.Channel};
+%        params.transform = hMainGui.Values.TformChannel{Object.Channel};
         params.bead_model=Config.Model;
         params.max_beads_per_region=Config.MaxFunc;
         params.scale=Config.PixSize;

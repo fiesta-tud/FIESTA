@@ -59,19 +59,24 @@ if h.Key=='s'
 end
 
 function Scroll(~,eventdata)
-global Stack;
+global TimeInfo;
 hBleachEvaluate=getappdata(0,'hBleachEvaluate');
 hBleachEvaluate.Zoom  = max([0 hBleachEvaluate.Zoom-eventdata.VerticalScrollCount]);
 xy=get(hBleachEvaluate.aPlot,{'xlim','ylim'});
-xy{1}(2) = max([length(Stack) - hBleachEvaluate.Zoom*200 200]);
+xy{1}(2) = max([(TimeInfo{1}(end)-TimeInfo{1}(1))/1000-hBleachEvaluate.Zoom*(TimeInfo{1}(end)-TimeInfo{1}(1))/50000 1]);
+if xy{1}(2) == 1
+    hBleachEvaluate.Zoom = 50;
+end
 set(hBleachEvaluate.aPlot,{'xlim','ylim'},xy);
+m = find((TimeInfo{1}-TimeInfo{1}(1))/1000<xy{1}(2),1,'last');
+xy{1}(2) = m;
 set(hBleachEvaluate.aVerify,'xlim',xy{1});
 setappdata(0,'hBleachEvaluate',hBleachEvaluate);  
 
 function Skip
 hBleachEvaluate=getappdata(0,'hBleachEvaluate');
-hBleachEvaluate.BleachTime(end+1,1) = NaN;
-hBleachEvaluate.BleachTime(end,2) = NaN;
+hBleachEvaluate.BleachTime(end+1,1) = -1;
+hBleachEvaluate.BleachTime(end,2) = -1;
 hBleachEvaluate.BleachTime(end,3) = 0;    
 X= round(hBleachEvaluate.Objects(hBleachEvaluate.idx,1));
 Y= round(hBleachEvaluate.Objects(hBleachEvaluate.idx,2));
@@ -86,7 +91,7 @@ hBleachEvaluate=getappdata(0,'hBleachEvaluate');
 if ~isempty(hBleachEvaluate.Current)
     hBleachEvaluate.BleachTime(end+1,1) = hBleachEvaluate.Current(1);
     if length(hBleachEvaluate.Current)==1
-        hBleachEvaluate.BleachTime(end,2) = NaN;
+        hBleachEvaluate.BleachTime(end,2) = -1;
         hBleachEvaluate.BleachTime(end,3) = 1;    
     else
         hBleachEvaluate.BleachTime(end,2) = hBleachEvaluate.Current(2);
@@ -103,6 +108,7 @@ end
 
 function Update(hBleachEvaluate)
 global Stack;
+global TimeInfo;
 found = 0;
 while ~found
     idx = ceil(rand*size(hBleachEvaluate.Objects,1));
@@ -137,8 +143,9 @@ for n=1:length(I)
         kymo(:,n) = round(mean(pic,2));
     end
 end
-plot(hBleachEvaluate.aPlot,I,'-*b');
-legend(['X=' num2str(X) ', Y=' num2str(Y)]);
+plot(hBleachEvaluate.aPlot,(TimeInfo{1}-TimeInfo{1}(1))/1000,I,'-*b');
+set(hBleachEvaluate.aPlot,'XLim',[0 (TimeInfo{1}(end)-TimeInfo{1}(1))/1000]);
+legend(['X=' num2str(X) ', Y=' num2str(Y)],'AutoUpdate','off');
 imshow(kymo,[min(min(kymo)) max(max(kymo))],'Parent',hBleachEvaluate.aVerify);
 hBleachEvaluate.idx = idx;
 hBleachEvaluate.Current = [];

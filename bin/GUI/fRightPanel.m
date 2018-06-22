@@ -58,8 +58,8 @@ switch func
         QueueSlider;        
     case 'ShowAllFil'
         ShowAllFil;        
-    case 'SubtractDrift'
-        SubtractDrift(varargin{1});
+    case 'ApplyCorrections'
+        ApplyCorrections(varargin{1});
     case 'DeleteQueue'
         DeleteQueue(varargin{1});
     case 'ExportMeasure'
@@ -70,8 +70,8 @@ switch func
         ExportKymo(varargin{1});          
     case 'RefreshServerQueue'
         RefreshServerQueue(varargin{1});
-    case 'CheckDrift'
-        CheckDrift(varargin{1});      
+    case 'CheckReference'
+        CheckReference(varargin{1});      
     case 'CorrectKymoIndex'
         CorrectKymoIndex(varargin{1});      
     case 'IgnoreObjects'   
@@ -218,60 +218,28 @@ if FileName~=0
 end
 fShared('ReturnFocus');
 
-function Object=CalcDrift(Object,Drift,Value)
-if ~isempty(Drift)
-    if Value == 1 && Object.Drift == 0
-        t = -1; %subtract drift
-    elseif Value == 0 && Object.Drift == 1
-        t = 1; %add drift
-    else
-        return;
-    end
-    nData = size(Object.Results,1);    
-    for i=1:nData
-        k=find(Drift(:,1)==Object.Results(i,1));
-        if length(k)==1
-            Object.Results(i,3:5)=Object.Results(i,3:5)+t*Drift(k,2:4);
-            if any(isnan(Drift(:,4)))
-                Object.Results(i,9) = Object.Results(i,9) - t* norm(Drift(k,5:6));    
-            else
-                Object.Results(i,9) = Object.Results(i,9) - t* norm(Drift(k,4:7));
-            end
-            if isfield(Object,'PosCenter')
-                Object.PosStart(i,:) = Object.PosStart(i,:) + t*Drift(k,2:4);
-                Object.PosCenter(i,:) = Object.PosCenter(i,:) + t*Drift(k,2:4);
-                Object.PosEnd(i,:) = Object.PosEnd(i,:) + t*Drift(k,2:4);
-                Object.Data{i}(:,1) = Object.Data{i}(:,1) + t*Drift(k,2);
-                Object.Data{i}(:,2) = Object.Data{i}(:,2) + t*Drift(k,3);  
-                Object.Data{i}(:,3) = Object.Data{i}(:,3) + t*Drift(k,4);  
-            end
-        end
-        Object.Results(:,6)=fDis(Object.Results(:,3:5));
-    end    
-    Object.Drift=Value;
-end
-
-function SubtractDrift(hMainGui)
+function ApplyCorrections(hMainGui)
 global Molecule;
 global Filament;
 Drift=getappdata(hMainGui.fig,'Drift');
 if ~isempty(Drift)
     fDataGui('DeleteGUI',1);
     Value=get(gcbo,'Value');
-    set(hMainGui.RightPanel.pData.cMolDrift,'Value',Value);
-    set(hMainGui.RightPanel.pData.cFilDrift,'Value',Value);    
+    set(hMainGui.RightPanel.pData.cMolCorrections,'Value',Value);
+    set(hMainGui.RightPanel.pData.cFilCorrections,'Value',Value);    
     nMol=length(Molecule);
     nFil=length(Filament);
     for i=1:nMol
         if length(Drift)>=Molecule(i).Channel && ~isempty(Drift{Molecule(i).Channel})
-            Molecule(i)=CalcDrift(Molecule(i),Drift{Molecule(i).Channel},Value);
+            Molecule(i)=fCorrectPos(Molecule(i),Drift{Molecule(i).Channel},Value);
         end
     end
     for i=1:nFil
         if length(Drift)>=Filament(i).Channel && ~isempty(Drift{Filament(i).Channel})
-            Filament(i)=CalcDrift(Filament(i),Drift{Filament(i).Channel},Value);
+            Filament(i)=fCorrectPos(Filament(i),Drift{Filament(i).Channel},Value);
         end
     end
+    fShow('Image');
     fShow('Tracks');
 else
     set(hMainGui.RightPanel.pData.cMolDrift,'Value',0);
@@ -279,11 +247,11 @@ else
 end
 fShared('ReturnFocus');
 
-function CheckDrift(hMainGui)
+function CheckReference(hMainGui)
 Drift=getappdata(hMainGui.fig,'Drift');
 if ~isempty(Drift)
-    set(hMainGui.RightPanel.pData.cMolDrift,'Value',0);   
-    set(hMainGui.RightPanel.pData.cFilDrift,'Value',0); 
+    set(hMainGui.RightPanel.pData.cMolCorrections,'Value',0);   
+    set(hMainGui.RightPanel.pData.cFilCorrections,'Value',0); 
     fShow('Marker',hMainGui,hMainGui.Values.FrameIdx);
     fShow('Tracks');    
 end
@@ -510,7 +478,7 @@ global KymoTrackFil;
 s=str2double(get(hMainGui.RightPanel.pTools.eKymoStart,'String'));
 e=str2double(get(hMainGui.RightPanel.pTools.eKymoEnd,'String'));
 if ~isnan(s)&&~isnan(e)&&~isempty(Stack)
-    [KymoGraph,KymoPixSize]=NewKymo(hMainGui.Scan);
+    [KymoGraph,KymoPixSize,KymoInfo]=NewKymo(hMainGui.Scan);
     KymoGraph(e+1:end,:,:)=[];
     KymoGraph(1:s-1,:,:)=[];
     try
@@ -548,7 +516,8 @@ if ~isnan(s)&&~isnan(e)&&~isempty(Stack)
     if size(Image,3)==1
        Image=Image*2^16;
     end
-    hMainGui.KymoGraph=image(Image,'Parent',hMainGui.MidPanel.aKymoGraph,'CDataMapping','scaled');
+    hMainGui.KymoGraph = image(Image,'Parent',hMainGui.MidPanel.aKymoGraph,'CDataMapping','scaled');
+    hMainGui.KymoInfo = KymoInfo;
     set(hMainGui.MidPanel.aKymoGraph,'CLim',[0 65535],'YDir','reverse'); 
     set(hMainGui.MidPanel.aKymoGraph,'Visible','on'); 
     set(hMainGui.fig,'colormap',colormap('Gray'));
@@ -568,8 +537,10 @@ if ~isnan(s)&&~isnan(e)&&~isempty(Stack)
     end
 end
 
-function [KymoGraph,KymoPix] = NewKymo(Scan)
+function [KymoGraph,KymoPix,KymoInfo] = NewKymo(Scan)
 global Stack;
+global Config;
+global FiestaDir;
 hMainGui=getappdata(0,'hMainGui');
 Drift=getappdata(hMainGui.fig,'Drift');
 iX=Scan.InterpX;
@@ -584,74 +555,88 @@ if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
     else
         N = hMainGui.Values.MaxIdx(stidx+1);
     end
+    tN = N;
 else
     stidx=1:numel(Stack);
     N = max(hMainGui.Values.MaxIdx(2:end));
+    tN = hMainGui.Values.MaxIdx(2:end);
 end
 for k = stidx
     if length(Drift)<k || isempty(Drift{k})
-        Drift{k} = [ 1 0 0 ];
+        Drift{k} = [ 1 0 0; 0 1 0; 0 0 1 ];
     end
 end
-progressdlg('String','Creating KymoGraph','Min',0,'Max',N,'Parent',hMainGui.fig);
+dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
+parallelprogressdlg('String','Creating KymoGraph','Max',sum(tN),'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
 KymoGraph = zeros(N,length(d),length(stidx)); 
 if get(hMainGui.RightPanel.pTools.cKymoDrift,'Value')==1 && ~isempty(Drift)
     if get(hMainGui.RightPanel.pTools.mKymoMethod,'Value')==1
-        for n = 1:N
-            for k = stidx
-                [~,m]=min(abs(Drift{k}(:,1)-n));
-                if n>size(Stack{k},3)
-                    KymoGraph(n,:,k)=KymoGraph(n-1,:,k);
-                else
-                    Z = interp2(double(Stack{k}(:,:,n)),iX+Drift{k}(m,2)/hMainGui.Values.PixSize,iY+Drift{k}(m,3)/hMainGui.Values.PixSize,'nearest');
-                    KymoGraph(n,:,k)=max(Z,[],1);
-                end
-            end
-            progressdlg(n);
+        for k = stidx
+            S = Stack{k};
+            D = Drift{k};
+            nS = size(S,3);
+            parfor(n = 1:nS,Config.NumCores)
+                fidx = min([n size(D,3)]);
+                T = D(:,:,fidx);
+                Det = T(1,1).*T(2,2) - T(1,2) .* T(2,1);
+                T = [ T(2,2) -T(1,2) 0; -T(2,1) T(1,1) 0; T(2,1).*T(3,2)-T(3,1).*T(2,2) T(1,2).*T(3,1)-T(3,2).*T(2,2) Det] / Det;
+                NX = iX * T(1,1) + iY * T(2,1) + T(3,1);
+                NY = iX * T(1,2) + iY * T(2,2) + T(3,2);
+                Z = interp2(double(S(:,:,n)),NX,NY,'nearest');
+                KymoGraph(n,:,k)=max(Z,[],1);
+                fSave(dirStatus,sum(tN(1:k-1))+n);
+            end     
         end
     else
-        for n = 1:N
-            for k = stidx
-                [~,m]=min(abs(Drift{k}(:,1)-n));
-                if n>size(Stack{k},3)
-                    KymoGraph(n,:,k)=KymoGraph(n-1,:,k);
-                else
-                    Z = interp2(double(Stack{k}(:,:,n)),iX+Drift{k}(m,2)/hMainGui.Values.PixSize,iY+Drift{k}(m,3)/hMainGui.Values.PixSize);
-                    KymoGraph(n,:,k)=mean(Z,1);
-                end
-            end
-            progressdlg(n);
-        end 
-        KymoGraph(isnan(KymoGraph))=0;
+        for k = stidx
+            S = Stack{k};
+            D = Drift{k};
+            nS = size(S,3);
+            parfor(n = 1:nS,Config.NumCores)
+                fidx = min([n size(D,3)]);
+                T = D(:,:,fidx);
+                Det = T(1,1).*T(2,2) - T(1,2) .* T(2,1);
+                T = [ T(2,2) -T(1,2) 0; -T(2,1) T(1,1) 0; T(2,1).*T(3,2)-T(3,1).*T(2,2) T(1,2).*T(3,1)-T(3,2).*T(2,2) Det] / Det;
+                NX = iX * T(1,1) + iY * T(2,1) + T(3,1);
+                NY = iX * T(1,2) + iY * T(2,2) + T(3,2);
+                Z = interp2(double(S(:,:,n)),NX,NY);
+                KymoGraph(n,:,k)=mean(Z,1);
+                fSave(dirStatus,sum(tN(1:k-1))+n);
+            end     
+        end
     end
 else
     if get(hMainGui.RightPanel.pTools.mKymoMethod,'Value')==1
-        for n = 1:N
-            for k = stidx
-                if n>size(Stack{k},3)
-                    KymoGraph(n,:,k)=KymoGraph(n-1,:,k);
-                else
-                    Z = interp2(double(Stack{k}(:,:,n)),iX,iY,'nearest');
-                    KymoGraph(n,:,k)=max(Z,[],1);
-                end
-            end
-            progressdlg(n);
+        for k = stidx
+            S = Stack{k};
+            nS = size(S,3);
+            parfor(n = 1:nS,Config.NumCores)
+                Z = interp2(double(S(:,:,n)),iX,iY,'nearest');
+                KymoGraph(n,:,k)=max(Z,[],1);
+                fSave(dirStatus,sum(tN(1:k-1))+n);
+            end     
         end
     else
-        for n = 1:N
-            for k = stidx
-                if n>size(Stack{k},3)
-                    KymoGraph(n,:,k)=KymoGraph(n-1,:,k);
-                else
-                    Z = interp2(double(Stack{k}(:,:,n)),iX,iY);
-                    KymoGraph(n,:,k)=mean(Z,1);
-                end
-            end
-            progressdlg(n);
-        end 
+        for k = stidx
+            S = Stack{k};
+            nS = size(S,3);
+            parfor(n = 1:nS,Config.NumCores)
+                Z = interp2(double(S(:,:,n)),iX,iY);
+                KymoGraph(n,:,k)=mean(Z,1);
+                fSave(dirStatus,sum(tN(1:k-1))+n);
+            end     
+        end
+    end
+end
+parallelprogressdlg('close');
+for n = stidx
+    k = find(max(KymoGraph(:,:,n),[],2)==0,1,'first');
+    if ~isempty(k)
+        KymoGraph(k:N,:,n) = repmat(KymoGraph(k-1,:,n),N-k+1,1);
     end
 end
 KymoGraph = KymoGraph(:,:,stidx);
+KymoInfo = stidx;
 
 function UpdateKymoTracks(hMainGui)
 global Molecule;
@@ -794,7 +779,7 @@ fi = 1:0.1:numel(newX);
 newX = interp1(1:numel(newX),newX,fi);
 newY = interp1(1:numel(newY),newY,fi);
 stidx = getChannels(hMainGui);
-kObj = find(ismember([Objects.Channel],stidx));
+kObj = fliplr(find(ismember([Objects.Channel],stidx)));
 for idx=kObj
     polyX=[lx ux(length(ux):-1:1)];
     polyY=[ly uy(length(uy):-1:1)];    
@@ -834,6 +819,9 @@ for idx=kObj
         nTrack=nTrack+1;
     end
 end
+idx = [KymoTrackObj.Index];
+[~,k] = sort(idx);
+KymoTrackObj = KymoTrackObj(k);
 
 function CorrectKymoIndex(mode)
 global Molecule;

@@ -44,12 +44,13 @@ global FiestaDir;
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Stack...','Visible','on');
 set(hMainGui.MidPanel.pView,'Visible','off');
-[FileName,PathName] = uigetfile({'*.stk;*.nd2;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
 if PathName~=0
-    Time = NaN;
     PixSize = [];
     if strcmpi(FileName(end-3:end),'.stk')
         filetype = 'MetaMorph';
+    elseif strcmpi(FileName(end-2:end),'.nd')
+        filetype = 'ND';
     elseif strcmpi(FileName(end-3:end),'.nd2')
         filetype = 'ND2';
     elseif strcmpi(FileName(end-3:end),'.zvi')
@@ -64,7 +65,7 @@ if PathName~=0
     FiestaDir.Stack=PathName;
     f=[PathName FileName];
     try
-        if strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')
+        if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')
             [Stack,TimeInfo,PixSize]=fReadND2(f); 
         else
             [Stack,TimeInfo,PixSize]=fStackRead(f);
@@ -75,10 +76,15 @@ if PathName~=0
     end
     if isempty(TimeInfo{1}) || length(unique(TimeInfo{1}))<length(TimeInfo{1})  
         Time = str2double(fInputDlg('No creation time  - Enter plane time difference in ms:','100'));    
+        nFrames=size(Stack{1},3);
         if ~isnan(Time)
-            nFrames=size(Stack{1},3);
-            TimeInfo{1}=(0:nFrames-1)*Config.Time;
+            TimeInfo{1}=(0:nFrames-1)*Time;
+        else
+            Time = 0;
+            TimeInfo{1}=(0:nFrames-1);
         end
+    else
+        Time = -round(mean(TimeInfo{1}(2:end)-TimeInfo{1}(1:end-1)),2);
     end
     if isempty(PixSize)
         PixSize = str2double(fInputDlg('Enter Pixel Size in nm:','100'));    
@@ -94,13 +100,13 @@ if PathName~=0
         Config.StackReadOptions = [];
         Config.PixSize=PixSize;
         Config.Time=Time;
-        hMainGui.Values.TformChannel{1} = [1 0 0; 0 1 0; 0 0 1];
         hMainGui.Values.PixSize=Config.PixSize;
         hMainGui.Values.FrameIdx = [1 1];
         hMainGui.Values.MaxIdx = [1 size(Stack{1},3)];
         hMainGui.Values.PostSpecial = [];
+        set(hMainGui.Menu.mApplyCorrections,'Checked','off');
+        set(hMainGui.Menu.mShowCorrections,'Checked','off');
         set(hMainGui.Menu.mCorrectStack,'Checked','off');
-        set(hMainGui.Menu.mAlignChannels,'Enable','off','Checked','off');
         fMainGui('InitGui',hMainGui);
     end
 else
@@ -125,7 +131,6 @@ global Filament;
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Stack...','Visible','on');
 set(hMainGui.MidPanel.pView,'Visible','off');
-set(hMainGui.Menu.mAlignChannels,'Enable','off','Checked','off');
 fOpenStruct = fOpenStackSpecial;
 if ~isempty(fOpenStruct)
     set(hMainGui.fig,'Pointer','watch');   
@@ -159,16 +164,21 @@ if ~isempty(fOpenStruct)
             Config.Directory{n}=PathName;
             Config.StackReadOptions = [];
             nFrames(n)=size(Stack{n},3);
-            if (isempty(TimeInfo{n}) && nFrames>1) || length(unique(TimeInfo{n}))<length(TimeInfo{n}) 
-                Config.Time(n) = str2double(fInputDlg('Creation time corrupt - Enter plane time difference in ms:','100'));  
-                if ~isnan(Config.Time(n))
-                    TimeInfo{n}=(0:nFrames-1)*Config.Time(n);
-                end          
-            else
-                Config.Time(n) = NaN;
+            if nFrames == 1
+                Config.Time(n) = 0;
                 if nFrames(n)==1
                     TimeInfo{n} = 0;
                 end
+            elseif isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n}) 
+                Config.Time(n) = str2double(fInputDlg('No creation time  - Enter plane time difference in ms:','100'));  
+                if ~isnan(Config.Time(n))
+                    TimeInfo{n}=(0:nFrames-1)*Config.Time(n);
+                else
+                    Config.Time(n) = 0;
+                    TimeInfo{n}=(0:nFrames-1);
+                end
+            else
+               Config.Time(n) = -round(mean(TimeInfo{n}(2:end)-TimeInfo{n}(1:end-1)),2);
             end
             nFrames(n) = size(Stack{n},3);
             if strcmpi(FileName(end-3:end),'.stk')
@@ -240,7 +250,6 @@ if ~isempty(fOpenStruct)
         end
         if ~isempty(Stack)
             nChannels = length(TimeInfo);
-            TformChannel = cell(1,nChannels);
             nFrames = zeros(1,nChannels);
             for n = 1:nChannels
                 nFrames(n) = size(Stack{n},3);
@@ -249,11 +258,9 @@ if ~isempty(fOpenStruct)
             Config.StackName{1}=FileName;
             Config.StackReadOptions = options;
             if strcmpi(FileName(end-3:end),'.stk')
-                filetype{1} = 'MetaMorph';
-                Config.Time(1:nChannels) = NaN;
+                filetype{1} = 'MetaMorph';             
             elseif strcmpi(FileName(end-3:end),'.nd2')
-                filetype{1} = 'ND2';
-                Config.Time(1:nChannels) = NaN;
+                filetype{1} = 'ND2';               
             else
                 if any(nFrames>1)
                     Config.Time(1:nChannels) = str2double(fInputDlg('Enter plane time difference in ms:','100'));
@@ -264,33 +271,21 @@ if ~isempty(fOpenStruct)
             end
             for n = 1:nChannels
                 nFrames(n) = size(Stack{n},3);
-                if any(isnan(Config.Time)) && (isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n}))   
-                    Config.Time(n) = str2double(fInputDlg('Creation time corrupt - Enter plane time difference in ms:','100'));    
-                end    
-                if ~isnan(Config.Time(n))             
-                   TimeInfo{n}=(0:nFrames(n)-1)*Config.Time(n);
-                end 
-                TformChannel{n} = [1 0 0; 0 1 0; 0 0 n];
-            end
-            if strcmp(fOpenStruct.Mode,'rSpatialSplitting')
-                MaxImg1 = max(Stack{1},[],3);
-                IC = MaxImg1;
-                IR = MaxImg1(17:end-16,17:end-16);
-                [optimizer,metric] = imregconfig('multimodal');
-                TformChannel{1} = [1 0 0; 0 1 0; 0 0 1];
-                for n = 2:nChannels
-                    MaxImg2 = max(Stack{n},[],3);
-                    I = MaxImg2(17:end-16,17:end-16);
-                    c = normxcorr2(I,IC);
-                    [ypeak, xpeak] = find(c==max(c(:)));
-                    yoffSet = ypeak-size(I,1)-16;
-                    xoffSet = xpeak-size(I,2)-16;
-                    T = affine2d([ 1 0 0; 0 1 0; xoffSet yoffSet 1]); 
-                    tform = imregtform(I,IR,'rigid',optimizer,metric,'InitialTransformation',T);
-                    T = tform.T;
-                    TformChannel{n} = T;
-                    TformChannel{n}(3,3) = n;
-                    set(hMainGui.Menu.mAlignChannels,'Enable','on');
+                if nFrames == 1
+                    Config.Time(n) = 0;
+                    if nFrames(n)==1
+                        TimeInfo{n} = 0;
+                    end
+                elseif isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n}) 
+                    Config.Time(n) = str2double(fInputDlg('No creation time  - Enter plane time difference in ms:','100'));  
+                    if ~isnan(Config.Time(n))
+                        TimeInfo{n}=(0:nFrames-1)*Config.Time(n);
+                    else
+                        Config.Time(n) = 0;
+                        TimeInfo{n}=(0:nFrames-1);
+                    end
+                else
+                    Config.Time(n) = -round(mean(TimeInfo{n}(2:end)-TimeInfo{n}(1:end-1)),2);
                 end
             end
         end
@@ -314,10 +309,10 @@ if ~isempty(fOpenStruct)
         Config.PixSize=PixSize;
         Config.StackType=filetype;
         hMainGui.Values.PixSize=Config.PixSize;
-        hMainGui.Values.TformChannel = TformChannel;
         hMainGui.Values.PostSpecial = fOpenStruct.Optional;
+        set(hMainGui.Menu.mApplyCorrections,'Checked','off');
+        set(hMainGui.Menu.mShowCorrections,'Checked','off');
         set(hMainGui.Menu.mCorrectStack,'Checked','off');
-        set(hMainGui.Menu.mAlignChannels,'Checked','off');
         fMainGui('InitGui',hMainGui);
     end
 end
@@ -373,14 +368,12 @@ hMainGui = getappdata(0,'hMainGui');
 [FileName,PathName] = uigetfile({'*.mat','MATLAB Stacks (*.mat)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
 if FileName~=0
     progressdlg('Title','Loading Stack','String','Reading stack from MATLAB file','Indeterminate','on');
-    load([PathName FileName]); 
+    load([PathName FileName],'Stack','TimeInfo'); 
     progressdlg('close');
     PixSize = str2double(fInputDlg('Enter Pixel Size in nm:','100'));
     nFrames = zeros(size(Stack));
-    TformChannel = cell(size(Stack));
     for n = 1:length(Stack)
         nFrames(n) = size(Stack{n},3);
-        TformChannel{n} = [1 0 0; 0 1 0; 0 0 1];
     end 
     if all(nFrames==nFrames(1))
         hMainGui.Values.FrameIdx = ones(1,2); 
@@ -394,11 +387,10 @@ if FileName~=0
     Config.StackName={FileName};
     Config.Directory={PathName};
     hMainGui.Values.PixSize=Config.PixSize;
-    hMainGui.Values.TformChannel = TformChannel;
     hMainGui.Values.PostSpecial = [];
+    set(hMainGui.Menu.mApplyCorrections,'Checked','off');
+    set(hMainGui.Menu.mShowCorrections,'Checked','off'); 
     set(hMainGui.Menu.mCorrectStack,'Checked','off');
-    set(hMainGui.Menu.mAlignChannels,'Checked','off');
-
     fMainGui('InitGui',hMainGui);
 end
 if ~isempty(Stack)||~isempty(Molecule)||~isempty(Filament)
@@ -471,8 +463,7 @@ function LoadTracks(hMainGui)
 global Stack
 global Molecule;
 global Filament;
-global Config;
-fRightPanel('CheckDrift',hMainGui);
+fRightPanel('CheckReference',hMainGui);
 Mode=get(gcbo,'UserData');
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Data...','Visible','on');
@@ -560,7 +551,7 @@ global Molecule;
 global Filament;
 global Objects;
 global Stack; x
-fRightPanel('CheckDrift',hMainGui);
+fRightPanel('CheckReference',hMainGui);
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Data...','Visible','on');
 set(hMainGui.MidPanel.pView,'Visible','off');

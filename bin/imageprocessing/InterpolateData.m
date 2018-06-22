@@ -1,4 +1,4 @@
-function objects = InterpolateData( obj, img, params )
+function objects = InterpolateData( obj, params )
 %INTERPOLATEDATA uses the data gained by fitting to calculate further useful
 %details of the objects. The additional values are stored as new fields inside
 %the 'objects' struct.
@@ -9,8 +9,8 @@ function objects = InterpolateData( obj, img, params )
 % results:
 %   objects   the output objects array
 
-  narginchk( 3, 3 ) ;
-  
+  narginchk( 2, 2 ) ;
+
   global error_events;
   
   % run through all objects
@@ -46,7 +46,7 @@ function objects = InterpolateData( obj, img, params )
         %stretched gaussian
         width = single( [ mean( [obj(obj_id).p(1).w(1).value obj(obj_id).p(1).w(2).value] ); mean( [obj(obj_id).p(1).w(1).error obj(obj_id).p(1).w(2).error] ) ] * params.scale );
         data = single([obj(obj_id).p(1).w(1).value; obj(obj_id).p(1).w(2).value] * params.scale );
-        objects.orientation(:,obj_id) = single( [ obj(obj_id).p(1).w(3).value; obj(obj_id).p(1).w(3).error ] );
+        objects.orientation(:,obj_id) = single( [ cos(obj(obj_id).p(1).w(3).value) -sin(obj(obj_id).p(1).w(3).value)] );
       elseif numel( obj(obj_id).p(1).w ) > 1 && numel( obj(obj_id).p(1).h ) > 1
         %gaussian with rings
         width = single( [obj(obj_id).p(1).w(1).value; obj(obj_id).p(1).w(1).error] * params.scale );
@@ -58,7 +58,7 @@ function objects = InterpolateData( obj, img, params )
         %diatom
         width = single( [ mean( [obj(obj_id).p(1).w(1).value obj(obj_id).p(1).w(2).value] ); mean( [obj(obj_id).p(1).w(1).error obj(obj_id).p(1).w(2).error] ) ] * params.scale );
         data = single([obj(obj_id).p(1).w(1).value obj(obj_id).p(1).w(2).value; obj(obj_id).p(1).r(1).value obj(obj_id).p(1).r(2).value] * params.scale );
-        objects.orientation(:,obj_id) = single( [ obj(obj_id).p(1).o(1).value; obj(obj_id).p(1).o(1).error ] );
+        objects.orientation(:,obj_id) = single( [ cos(obj(obj_id).p(1).o(1).value) -sin(obj(obj_id).p(1).o(1).value)] );
       else
         width = single( [obj(obj_id).p(1).w(1).value; obj(obj_id).p(1).w(1).error] * params.scale );
         data = [];
@@ -72,7 +72,7 @@ function objects = InterpolateData( obj, img, params )
       objects.data{obj_id} = single( data );
       
     else % elongated object
-        
+      
       % init variables
       seg_length = zeros( 1, numel(obj(obj_id).p) );  %<< the length start of each segment on the filament
       x_coeff = zeros( numel(obj(obj_id).p) - 1, 3 ); %<< the 3 coefficients for the interpolation in x-direction for each segment
@@ -93,7 +93,7 @@ function objects = InterpolateData( obj, img, params )
         e.o = double( e.o );
 
         % distinguish several cases of the positions of the two points
-        if all( s.x == e.x ) % identical points (this should not happen though) => ignore
+        if norm( s.x - e.x ) < params.object_width % points too close together (this should not happen though) => ignore
 
           error_events.degenerated_fil = error_events.degenerated_fil + 1;
           seg_length(k+1) = [];
@@ -168,7 +168,9 @@ function objects = InterpolateData( obj, img, params )
         
       end % of run through all sections
       
-     
+      if numel( obj(obj_id).p ) <= 1
+          continue
+      end
       % estimate length and its error
       try
         length = double_error( sum( seg_length ), ...
@@ -212,17 +214,6 @@ function objects = InterpolateData( obj, img, params )
       com_y = sum( weigth' .* p(:,2) ) ./ weigth_sum * params.scale;   
       objects.com_x(:,obj_id)  = single( [com_x.value; com_x.error] );
       objects.com_y(:,obj_id)  = single( [com_y.value; com_y.error] );
-
-      % estimate orientation
-      orientation = atan2( obj(obj_id).p(end).x(2) - obj(obj_id).p(1).x(2), ...
-                    obj(obj_id).p(end).x(1) - obj(obj_id).p(1).x(1) );
-      objects.orientation(:,obj_id) =  single( [orientation.value; orientation.error] );
-      
-      if params.focus_correction
-        % add 0.5*FWHM for both filament end points to correct length for focus drift 
-        length = length + 0.5 * obj(obj_id).p(1).w + 0.5 * obj(obj_id).p(end).w;
-      end
-      objects.length(:,obj_id) = single( [length.value; length.error] * params.scale );
         
       width = sum( weigth .* [ obj(obj_id).p.w ] ) ./ weigth_sum * params.scale;    
       objects.width(:,obj_id) = single( [width.value; width.error] );
@@ -260,25 +251,31 @@ function objects = InterpolateData( obj, img, params )
       ampli = interp1( cumsum( double( seg_length ) ), double( [ obj(obj_id).p.h ] ), l, 'pchip' );
       sigma = interp1( cumsum( double( seg_length ) ), double( [ obj(obj_id).p.w ] ), l, 'pchip' );
 
+      % estimate orientation
+      orientation = [x(2:end)-x(1:end-1); y(2:end)-y(1:end-1)];
+      orientation = orientation./sqrt(orientation(1,:).^2+orientation(2,:).^2);
+      objects.orientation(:,obj_id) =  single( mean(orientation,2) );
+      
       % save points in final data struct
       objects.data{obj_id} = single( [x'*params.scale y'*params.scale l'*params.scale sigma'*params.scale ampli' back'] );
-      
-      if params.focus_correction
-          
-          % add 0.5*FWHM for both filament end points to correct length for focus drift 
-          s_add = [(obj(obj_id).p( 1 ).x(1).value - 0.5 * obj(obj_id).p( 1 ).w(1).value * cos( obj(obj_id).p( 1 ).o.value ))*params.scale,...
-                   (obj(obj_id).p( 1 ).x(2).value - 0.5 * obj(obj_id).p( 1 ).w(1).value * sin( obj(obj_id).p( 1 ).o.value ))*params.scale,... 
-                   NaN sigma(1)'*params.scale ampli(1)' back(1)'];
 
-          e_add = [(obj(obj_id).p( end ).x(1).value + 0.5 * obj(obj_id).p( end ).w(1).value * cos( obj(obj_id).p( end ).o.value ))*params.scale,...
-                   (obj(obj_id).p( end ).x(2).value + 0.5 * obj(obj_id).p( end ).w(1).value * sin( obj(obj_id).p( end ).o.value ))*params.scale,... 
-                   NaN sigma(end)'*params.scale ampli(end)' back(end)'];
-      else
-          s_add = [];
-          e_add = [];
-      end
-           
-      objects.data{obj_id} = single( [s_add; objects.data{obj_id}; e_add] );
+     if params.focus_correction
+          % add 0.5*FWHM for both filament end points to correct length for focus drift 
+          length = length + 0.5 * obj(obj_id).p(1).w + 0.5 * obj(obj_id).p(end).w;
+          norm_vec = [cos(obj(obj_id).p(1).o.value) sin(obj(obj_id).p(1).o.value)];
+          ref_vec = [x(2)-x(1) y(2)-y(1)]/sqrt((x(2)-x(1))^2 + (y(2)-y(1))^2);
+          s_xy = [x(1) y(1)] - 0.5 * obj(obj_id).p( 1 ).w.value * norm_vec * sign(norm_vec(1)*ref_vec(1)+norm_vec(2)*ref_vec(2)); 
+          
+          norm_vec = [cos(obj(obj_id).p(end).o.value) sin(obj(obj_id).p(end).o.value)];
+          ref_vec = [x(end-1)-x(end) y(end-1)-y(end)]/sqrt((x(end-1)-x(end))^2 + (y(end-1)-y(end))^2);
+          e_xy = [x(end) y(end)] - 0.5 * obj(obj_id).p( end ).w.value * norm_vec * sign(norm_vec(1)*ref_vec(1)+norm_vec(2)*ref_vec(2)); 
+          
+          s_add = [s_xy*params.scale NaN sigma(1)'*params.scale ampli(1)' back(1)'];
+          e_add = [e_xy*params.scale NaN sigma(end)'*params.scale ampli(end)' back(end)'];
+          objects.data{obj_id} = single( [s_add; objects.data{obj_id}; e_add] );
+      end 
+      
+      objects.length(:,obj_id) = single( [length.value; length.error] * params.scale );
       
     end % if object is pointlike or elongated
 

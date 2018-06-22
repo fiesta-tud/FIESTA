@@ -6,9 +6,9 @@ function openhelp( site, anchor )
   
 website = 'https://www.bcube-dresden.de/fiesta/wiki/';
 if nargin == 0
-    web([website 'FIESTA'], '-browser')
+    web([website 'FIESTA'], '-notoolbar')
 elseif nargin == 1
-    web([website site], '-browser')
+    web([website site], '-notoolbar')
 else
-    web([website site '#' anchor], '-browser')
+    web([website site '#' anchor], '-notoolbar')
 end

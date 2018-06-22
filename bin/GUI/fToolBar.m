@@ -111,6 +111,16 @@ end
 function ToolKymoGraph(hMainGui)
 global Stack;
 if ~isempty(Stack)&&~isempty(hMainGui.KymoImage)
+    if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
+        if length(hMainGui.KymoInfo)>1 || hMainGui.KymoInfo(1) ~= hMainGui.Values.FrameIdx(1)
+            fRightPanel('ShowKymoGraph',hMainGui);
+        end
+    else
+        if length(hMainGui.KymoInfo)==1
+            fRightPanel('ShowKymoGraph',hMainGui);
+        end
+    end
+    hMainGui = getappdata(0,'hMainGui');
     set(hMainGui.ToolBar.ToolNormImage,'State','off');
     set(hMainGui.ToolBar.ToolThreshImage,'State','off');
     set(hMainGui.ToolBar.ToolKymoGraph,'State','on');
@@ -150,7 +160,7 @@ if ~isempty(Stack)
     set(hMainGui.Menu.mColorOverlay,'Checked',s);
     fShow('Image');
     fShow('Tracks');
-    if ~isempty(hMainGui.KymoImage) 
+    if ~isempty(hMainGui.KymoImage) && strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'on')
         hMainGui=getappdata(0,'hMainGui');
         fRightPanel('ShowKymoGraph',hMainGui);
     end
@@ -206,7 +216,7 @@ if ~isempty(Stack)
     fLeftPanel('Update',hMainGui);    
     fShow('SelectChannel',Molecule);
     fShow('SelectChannel',Filament);
-    if ~isempty(hMainGui.KymoImage) 
+    if ~isempty(hMainGui.KymoImage) && strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'on')
         hMainGui=getappdata(0,'hMainGui');
         fRightPanel('ShowKymoGraph',hMainGui);
     end

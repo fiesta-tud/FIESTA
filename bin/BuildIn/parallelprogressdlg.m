@@ -249,7 +249,7 @@ function progFigure = parallelprogressdlg(varargin)
         drawnow;
 
         %save start time for progress
-        starttime = clock;
+        starttime = [];
         
         statusdir = [prog.directory filesep 'fiestastatus'];
         if isdir(statusdir)
@@ -277,6 +277,11 @@ function RefreshProgressDlg(obj, event) %#ok<INUSD>
     % get userdata
     var = get(obj,'UserData');
     starttime = var{1};
+    if isempty(starttime)
+        starttime = clock;
+        var{1} = starttime;
+        set(obj,'UserData',var);
+    end
     min = 0;
     max = var{2};
     progHandles = var{3};
@@ -286,13 +291,16 @@ function RefreshProgressDlg(obj, event) %#ok<INUSD>
     value = length(files);
     if value<max
         % update ProgressBar
-        set(progHandles.progress,'Value',value);  
-
+        try
+            set(progHandles.progress,'Value',value);  
+        catch
+            return;
+        end
         % calculate and update remaining time if required
 
         if value>0
             runtime = etime(clock,starttime);
-            timeleft = runtime*(max-min)/(value-min) - runtime;
+            timeleft = runtime*(max-min+1)/(value-min+1) - runtime;
             timeleftstr = sec2timestr(timeleft);
             set(progHandles.text(2),'Text',[est_text timeleftstr]);
         else

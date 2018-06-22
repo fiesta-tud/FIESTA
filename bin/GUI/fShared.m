@@ -19,8 +19,8 @@ switch func
         ClearTracks(varargin{1});                
     case 'UpdateMenu'
         UpdateMenu(varargin{1});         
-    case 'SetDrift'
-        SetDrift(varargin{1});        
+    case 'SetReference'
+        SetReference(varargin{1});        
     case 'ReturnFocus'
         ReturnFocus;  
     case 'GetSaveDir'
@@ -110,6 +110,42 @@ BackUp.KymoTrackMol = KymoTrackMol;
 BackUp.KymoTrackFil = KymoTrackFil;
 set(hMainGui.Menu.mUndo,'Enable','on');
 
+function InverseSelectedPoints(hMainGui)
+global Molecule;
+global Filament;
+SelectedPoints = hMainGui.SelectedPoints;
+InversePoints = [];
+if ~isempty(SelectedPoints)
+    k = unique(real(SelectedPoints(:,1)));
+    k(k==0) = [];
+    if ~isempty(k)
+        for n = k'
+            idx = SelectedPoints(SelectedPoints(:,1)==n,2);
+            inv_idx = (1:size(Molecule(n).Results,1))';
+            idx(idx==0) = [];
+            inv_idx(idx) = [];
+            if ~isempty(inv_idx)
+                InversePoints = [InversePoints; ones(size(inv_idx))*n inv_idx zeros(size(inv_idx)) zeros(size(inv_idx))];
+            end
+        end
+    end
+    k = unique(imag(SelectedPoints(:,1)));
+    k(k==0) = [];
+    if ~isempty(k)
+        for n = k'
+            idx = SelectedPoints(SelectedPoints(:,1)==n*1i,2);
+            inv_idx = (1:size(Filament(n).Results,1))';
+            idx(idx==0) = [];
+            inv_idx(idx) = [];
+            if ~isempty(inv_idx)
+                InversePoints = [InversePoints; ones(size(inv_idx))*n*1i inv_idx zeros(size(inv_idx)) zeros(size(inv_idx))];
+            end
+        end
+    end
+end
+hMainGui.SelectedPoints = InversePoints;
+setappdata(0,'hMainGui',hMainGui);
+
 function [Mol,Fil] = DeleteSelectedPoints(hMainGui)
 global Molecule;
 global Filament;
@@ -117,6 +153,7 @@ SelectedPoints = hMainGui.SelectedPoints;
 Mol = [];
 Fil = [];
 if ~isempty(SelectedPoints)
+    SelectedPoints(SelectedPoints(:,2)==0,:) = [];
     % find Molecules
     k = unique(real(SelectedPoints(:,1)));
     k(k==0) = [];
@@ -200,19 +237,51 @@ global KymoTrackMol;
 global KymoTrackFil;
 global Stack;
 BackUpData(hMainGui);
-if ~isempty(Molecule)
-    if isempty(MolSelect)
-        MolSelect = [Molecule.Selected];
+set(hMainGui.fig,'pointer','watch');
+if any(isinf(MolSelect)) || any(isinf(FilSelect))
+    if isempty(hMainGui.KymoGraph)
+        return;
+    end
+    MolSelect = ones(size(Molecule));
+    FilSelect = ones(size(Filament));
+    if ~isempty(KymoTrackMol)
+        for n = 1:length(KymoTrackMol)
+           idx = KymoTrackMol(n).Index;
+           if size(KymoTrackMol(n).Track,1) > 0.9*size(Molecule(idx).Results,1)
+               MolSelect(idx) = 0;
+           end
+        end
+    end
+    if ~isempty(KymoTrackFil)
+        for n = 1:length(KymoTrackFil)
+           idx = KymoTrackFil(n).Index;
+           if size(KymoTrackFil(n).Track,1) > 0.9*size(Filament(idx).Results,1)
+               FilSelect(idx) = 0;
+           end
+        end
+    end
+    hMainGui.Values.CursorDownPos(:)=0;    
+    hMainGui.CursorMode='Normal';
+    hMainGui.CurrentKey=[];
+end
+if isempty(MolSelect)
+    MolSelect = [Molecule.Selected]; 
+end
+if isempty(FilSelect)
+    FilSelect = [Filament.Selected];
+end
+if any(MolSelect) || any(FilSelect)
+    if strcmp(hMainGui.CurrentKey,'shift')
+        MolSelect = MolSelect==0;
+        FilSelect = FilSelect==0;
     end
     [Molecule,KymoTrackMol]=DeleteSelection(Molecule,KymoTrackMol,MolSelect);
-end
-if ~isempty(Filament)
-    if isempty(FilSelect)
-        FilSelect = [Filament.Selected];
-    end
     [Filament,KymoTrackFil]=DeleteSelection(Filament,KymoTrackFil,FilSelect);
-end
-if ~any(MolSelect) && ~any(FilSelect)
+else
+    if strcmp(hMainGui.CurrentKey,'shift')
+        InverseSelectedPoints(hMainGui);    
+        hMainGui = getappdata(0,'hMainGui');
+    end
     [Mol,Fil]=DeleteSelectedPoints(hMainGui);
     delete(findobj('Tag','pSelectedPoints'));
     hMainGui.SelectedPoints = [];
@@ -234,14 +303,19 @@ fRightPanel('UpdateList',hMainGui.RightPanel.pData.FilList,Filament,hMainGui.Rig
 if isempty(Molecule)
     Molecule=[];
     Molecule=fDefStructure(Molecule,'Molecule');
-    set(hMainGui.RightPanel.pData.cMolDrift,'Enable','off');    
+    set(hMainGui.RightPanel.pData.cMolCorrections,'Enable','off');    
     set(hMainGui.RightPanel.pData.cIgnoreMol,'Enable','off');
 end
 if isempty(Filament)
     Filament=[];
     Filament=fDefStructure(Filament,'Filament'); 
+    set(hMainGui.RightPanel.pData.cFilCorrections,'Enable','off');
     set(hMainGui.RightPanel.pData.cIgnoreFil,'Enable','off');            
-    set(hMainGui.RightPanel.pData.cFilDrift,'Enable','off');
+end
+if strcmp(hMainGui.CurrentKey,'shift')
+    hMainGui.Values.CursorDownPos(:)=0;    
+    hMainGui.CursorMode='Normal';
+    hMainGui.CurrentKey=[];
 end
 UpdateMenu(hMainGui)
 setappdata(0,'hMainGui',hMainGui);
@@ -254,6 +328,7 @@ else
     fShow('Image',hMainGui);
     fShow('Tracks',hMainGui);
 end
+set(hMainGui.fig,'pointer','arrow');
 
 function ClearTracks(hMainGui)
 global Molecule;
@@ -269,55 +344,79 @@ if isempty(Stack)
     drawnow
 end 
 
-function SetDrift(hMainGui)
+function SetReference(hMainGui)
 global Molecule;
+global Config;
+global FiestaDir;
 fRightPanel('CheckDrift',hMainGui);
 nMol=length(Molecule);
 if nMol>0
-    stidx = unique([Molecule([Molecule.Selected]==1).Channel]);
+    stidx = sort(unique([Molecule([Molecule.Selected]==1).Channel]));
     Drift = cell(1,hMainGui.Values.MaxIdx(1));
-    for m = stidx
-        Drift{m} =[];
-        k=find([Molecule.Selected]==1 & [Molecule.Channel]==m);
-        nData=zeros(length(Molecule(k)),1);
-        for i = 1:length(Molecule(k))
-            nData(i)=Molecule(k(i)).Results(size(Molecule(k(i)).Results,1),1);
-        end
-        n=max(nData);
-        n=n(1);
-        F=(1:n);
-        if ~isempty(k)
-            X=zeros(n,length(k));
-            Y=zeros(n,length(k));
-            Z=zeros(n,length(k));
-            p=1;
-            for i=k
-                Drift{m} =[];
-                R_Index=Molecule(i).Results(:,1);
-                R_X=Molecule(i).Results(:,3);
-                R_Y=Molecule(i).Results(:,4);
-                R_Z=Molecule(i).Results(:,5);
-                DisX=zeros(n,1);
-                DisY=zeros(n,1);
-                DisZ=zeros(n,1);
-                for j=1:n
-                    [~,k2]=min(abs(j-R_Index));
-                    DisX(j)=R_X(k2(1))-R_X(1);
-                    DisY(j)=R_Y(k2(1))-R_Y(1);
-                    DisZ(j)=R_Z(k2(1))-R_Z(1);
+    pairs = cell(1,max(stidx));
+    if numel(stidx)>1 && any(stidx==1)
+        idx = cell(1,max(stidx));
+        XY = cell(1,max(stidx));
+        for m = stidx 
+            idx{m} = find([Molecule.Selected]==1 & [Molecule.Channel]==m);
+            nMol = numel(idx{m});
+            if nMol>2
+                XY{m} = zeros(nMol,2);
+                for n = 1:nMol
+                    XY{m}(n,:) = [mean(Molecule(idx{m}(n)).Results(:,3)) mean(Molecule(idx{m}(n)).Results(:,4))]/Molecule(idx{m}(n)).PixelSize;
                 end
-                X(:,p)=DisX;
-                Y(:,p)=DisY;
-                Z(:,p)=DisZ;
-                p=p+1;
+                if m>1 && ~isempty(XY{1})
+                    pairs{m} = matchReferencePoints(XY{m},XY{1});
+                    if isempty(pairs{m})
+                        fMsgDlg({['Could match enough molecules in channel ' num2str(m) ' with molecules'],'in channel 1, track or select more reference molecules.'},'error');  
+                        return;
+                    end
+                end
+            else
+                fMsgDlg({['Not enough molecules in channel ' num2str(m) ','],'track or select more reference molecules.'},'error');   
+                return;
+            end  
+        end
+    end
+    for m = stidx
+        midx = find([Molecule.Selected]==1 & [Molecule.Channel]==m);
+        if numel(midx)>2
+            nData = zeros(1,numel(midx));
+            XY{m} = zeros(numel(midx),2);
+            for n = 1:numel(midx)
+                nData(n) = Molecule(midx(n)).Results(size(Molecule(midx(n)).Results,1),1);
+                XY{m}(n,:) = Molecule(midx(n)).Results(1,3:4)/Molecule(midx(n)).PixelSize;
             end
-            drift_x=mean(X,2);
-            drift_y=mean(Y,2);
-            drift_z=mean(Z,2);
-            drift_dx=std(X,0,2);
-            drift_dy=std(Y,0,2);
-            drift_dz=std(Z,0,2);
-            Drift{m}=[F' drift_x drift_y drift_z drift_dx drift_dy drift_dz];
+            if isempty(pairs{m})
+                Mol = Molecule(midx);
+                rXY = XY{m};
+            else
+                Mol = Molecule(midx(pairs{m}(:,1)));
+                rXY = XY{1}(pairs{m}(:,2),:);
+            end
+            D = zeros(3,3,max(nData));
+            dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
+            parallelprogressdlg('String',['Calculating transformations for channel ' num2str(m)],'Max',max(nData),'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
+            parfor (frame = 1:max(nData),Config.NumCores)   
+                nXY = zeros(numel(Mol),2);
+                for n = 1:numel(Mol)
+                    R_Index=Mol(n).Results(:,1);
+                    [~,k]=min(abs(frame-R_Index));
+                    nXY(n,:) = Mol(n).Results(k,3:4)/Mol(n).PixelSize;
+                end
+                if m==1 && frame==1
+                    T.T = [ 1 0 0; 0 1 0; 0 0 1];
+                else
+                    T = fitgeotrans(nXY,rXY,'nonreflectivesimilarity');
+                end
+                D(:,:,frame) = T.T;
+                fSave(dirStatus,frame);
+            end
+            parallelprogressdlg('close');
+            Drift{m} = D;
+        else
+            fMsgDlg({['Not enough molecules in channel ' num2str(m) ','],'track or select more reference molecules.'},'error');   
+            return;
         end
     end
     setappdata(hMainGui.fig,'Drift',Drift);
@@ -387,10 +486,14 @@ set(hMainGui.Menu.mAnalyseFrame,'Enable',enable);
 set(hMainGui.Menu.mFrame,'Enable',enable);
 set(hMainGui.Menu.mMaximum,'Enable',enable);
 set(hMainGui.Menu.mAverage,'Enable',enable);
-if strcmp(get(hMainGui.Menu.mCorrectStack,'Checked'),'on')
+if isempty(Drift) || strcmp(get(hMainGui.Menu.mCorrectStack,'Checked'),'on')
+    set(hMainGui.Menu.mApplyCorrections,'Enable','off','Checked','off');
+    set(hMainGui.Menu.mShowCorrections,'Enable','off','Checked','off');
     set(hMainGui.Menu.mCorrectStack,'Enable','off');
-    set(hMainGui.Menu.mAlignChannels,'Enable','off','Checked','on');
-else  
+    delete(findobj(hMainGui.MidPanel.aView,'Tag','pCorrections'));
+else
+    set(hMainGui.Menu.mApplyCorrections,'Enable',enable);
+    set(hMainGui.Menu.mShowCorrections,'Enable',enable);
     set(hMainGui.Menu.mCorrectStack,'Enable',enable);
 end
 if strcmp(get(hMainGui.ToolBar.ToolNormImage,'State'),'on')
@@ -420,39 +523,36 @@ set(hMainGui.Menu.mMergeTracks,'Enable',enable);
 set(hMainGui.Menu.mCombineTracks,'Enable',enable);
 set(hMainGui.Menu.mDeleteTracks,'Enable',enable);
 if isempty(Molecule)
-    set(hMainGui.Menu.mSetDrift,'Enable','off');
-    set(hMainGui.Menu.mFindDrift,'Enable','off');      
-    set(hMainGui.RightPanel.pData.cMolDrift,'Enable','off','Value',0);
-    set(hMainGui.RightPanel.pData.cIgnoreMol,'Enable','off','Value',0);     
-    set(hMainGui.Menu.mCreateOffsetMap,'Enable','off');
+    set(hMainGui.Menu.mSetReference,'Enable','off');
+    set(hMainGui.Menu.mFindReference,'Enable','off');      
+    set(hMainGui.RightPanel.pData.cMolCorrections,'Enable','off','Value',0);
+    set(hMainGui.RightPanel.pData.cIgnoreMol,'Enable','off','Value',0);
 else
-    set(hMainGui.Menu.mSetDrift,'Enable','on');
-    set(hMainGui.Menu.mFindDrift,'Enable','on');                
-    set(hMainGui.Menu.mCreateOffsetMap,'Enable','on');
+    set(hMainGui.Menu.mSetReference,'Enable','on');
+    set(hMainGui.Menu.mFindReference,'Enable','on');                
     if ~isempty(Drift)
-        set(hMainGui.RightPanel.pData.cMolDrift,'Enable','on');
+        set(hMainGui.RightPanel.pData.cMolCorrections,'Enable','on');
     else
-        set(hMainGui.RightPanel.pData.cMolDrift,'Enable','off','Value',0);
+        set(hMainGui.RightPanel.pData.cMolCorrections,'Enable','off','Value',0);
     end
     set(hMainGui.RightPanel.pData.cIgnoreMol,'Enable','on');
 end
 if isempty(Filament)
-    set(hMainGui.RightPanel.pData.cFilDrift,'Enable','off','Value',0);   
+    set(hMainGui.RightPanel.pData.cFilCorrections,'Enable','off','Value',0);   
     set(hMainGui.RightPanel.pData.cIgnoreFil,'Enable','off','Value',0);            
 else
     if ~isempty(Drift)
-        set(hMainGui.RightPanel.pData.cFilDrift,'Enable','on');
+        set(hMainGui.RightPanel.pData.cFilCorrections,'Enable','on');
     else
-        set(hMainGui.RightPanel.pData.cFilDrift,'Enable','off','Value',0);
+        set(hMainGui.RightPanel.pData.cFilCorrections,'Enable','off','Value',0);
     end
     set(hMainGui.RightPanel.pData.cIgnoreFil,'Enable','on');
     set(hMainGui.RightPanel.pData.cShowWholeFil,'Enable','on');
 end
-
 if isempty(Drift)
-    set(hMainGui.Menu.mSaveDrift,'Enable','off');
+    set(hMainGui.Menu.mSaveCorrections,'Enable','off');
 else
-    set(hMainGui.Menu.mSaveDrift,'Enable','on');
+    set(hMainGui.Menu.mSaveCorrections,'Enable','on');
 end
 enable='off';
 if ~isempty(Objects)
@@ -476,15 +576,6 @@ set(hMainGui.Menu.mReconnect,'Enable',enable);
 set(hMainGui.Menu.mReconnectStatic,'Enable',enable);
 set(hMainGui.RightPanel.pData.cShowAllMol,'Enable',enable);
 set(hMainGui.RightPanel.pData.cShowAllFil,'Enable',enable);
-
-enable='off';
-if ~isempty(OffsetMap)
-    enable='on';
-end
-set(hMainGui.Menu.mShowOffsetMap,'Enable',enable);
-set(hMainGui.Menu.mSaveOffsetMap,'Enable',enable);
-set(hMainGui.Menu.mApplyOffsetMap,'Enable',enable);
-set(hMainGui.Menu.mClearOffsetMap,'Enable',enable);
 
 function Object=SelectOne(Object,KymoObject,n,v)
 if numel(Object.Selected)==1
@@ -629,9 +720,7 @@ else
     disregard = 0;
     
     params.bw_region = Config.Region;
-    if isfield(Config,'TformChannel')
-        params.transform = Config.TformChannel;
-    end
+    params.drift = Config.Drift;
 
     params.bead_model=Config.Model;
     params.max_beads_per_region=Config.MaxFunc;
@@ -717,7 +806,7 @@ Mode=get(gcbo,'UserData');
 if strcmp(Mode,'Server')
     %check if FIESTA tracking server available
     DirServer = CheckServer;
-    if ~isempty(DirServer);
+    if ~isempty(DirServer)
         %get local version of FIESTA
         if ispc
             f_id = fopen([DirCurrent 'readme.txt'], 'r'); 
@@ -726,7 +815,7 @@ if strcmp(Mode,'Server')
         end
         if f_id ~= -1
             index = fgetl(f_id);
-            local_version = index(66:74);
+            local_version = index(66:end);
             fclose(f_id); 
         else
             local_version = '';
@@ -735,7 +824,7 @@ if strcmp(Mode,'Server')
         f_id = fopen([DirServer 'FIESTA' filesep 'readme.txt'], 'r'); 
         if f_id ~= -1
             index = fgetl(f_id);
-            server_version = index(66:74);
+            server_version = index(66:end);
             fclose(f_id); 
         else
             server_version = '';
@@ -802,7 +891,6 @@ if ~contains(get(gcbo,'Tag'),'Batch')
         PathName = repmat(PathName,1,hMainGui.Values.MaxIdx(1));
     end
     Time = Config.Time;
-    TformChannel = hMainGui.Values.TformChannel;
     RelThresh = hMainGui.Values.RelThresh;
 else
     [FileName, PathName] = uigetfile({'*.stk','FIESTA Data(*.stk)';'*.tif','Multilayer TIFF-Files (*.tif)'},'Select multiple stacks for analysis',FiestaDir.Stack,'MultiSelect','on');
@@ -818,7 +906,6 @@ else
         addConfig.LastFrame = Inf;
     end
     Time = repmat(Config.Time,1,length(FileName));
-    TformChannel = repmat(hMainGui.Values.TformChannel,1,length(FileName));
     RelThresh = repmat(hMainGui.Values.RelThresh,1,length(FileName));
 end
 if isempty(FileName) || iscell(FileName)
@@ -881,12 +968,14 @@ if isempty(FileName) || iscell(FileName)
             end
             if isempty(hMainGui.Values.PostSpecial)
                 k = n;
-                addConfig.TformChannel{1} = TformChannel{n};
+                addConfig.Channel = n;
+                addConfig.Drift = {};
             else
                 k = 1:length(hMainGui.Values.TformChannel);
                 Config.BorderMargin = 0;
-                addConfig.TformChannel = hMainGui.Values.TformChannel;
-                addConfig.TformChannel{1}(3,3) = n;
+                %addConfig.TformChannel = hMainGui.Values.TformChannel;
+                addConfig.Channel = n;
+                addConfig.Drift = getappdata(hMainGui.fig,'Drift');
             end
             addConfig.StackReadOptions = Config.StackReadOptions;
             if strcmp(addConfig.Threshold.Mode,'relative')==1
@@ -901,6 +990,7 @@ if isempty(FileName) || iscell(FileName)
                 addConfig.Threshold.Filter{p} = Config.Threshold.Filter;
             end
             addConfig.Region = addRegion;
+            addConfig.NumCores = addConfig.NumCores;
             k = min([length(Stack)*ones(size(k)); k]);
             if ~CheckConfig(addConfig,Mode,Stack(k))
                 if strcmp(Mode,'Server')==1
@@ -910,6 +1000,7 @@ if isempty(FileName) || iscell(FileName)
                     fRightPanel('QueueServerPanel',hMainGui);   
                     set(hMainGui.RightPanel.pQueue.bSrvRefresh,'String','Refresh SERVER Queue');
                 elseif strcmp(Mode,'Local')==1||strcmp(Mode,'Reconnect')==1||strcmp(Mode,'One')==1
+                    addConfig.TrackingServer = [];
                     if isempty(Queue)
                         Queue=addConfig;
                     else
@@ -960,7 +1051,7 @@ try
                     fMsgDlg(ME.message,'error');
                     abort=1;
                 end
-                if ~isempty(Queue(1).Time) && ~isnan(Queue(1).Time)
+                if ~isempty(Queue(1).Time) && ~isnan(Queue(1).Time) && Queue(1).Time>0
                     for n = 1:length(aStack)
                         nFrames=size(aStack,3);
                         aTimeInfo{n}=(0:nFrames-1)*Queue(1).Time;
@@ -970,14 +1061,14 @@ try
                 aTimeInfo = TimeInfo;
                 aStack = Stack;
             end
-            if length(Queue(1).TformChannel)==1
-                k = Queue(1).TformChannel{1}(3,3);    
+            if isempty(Queue(1).Drift)
+                k = Queue(1).Channel;   
             else
-                k = 1:length(Queue(1).TformChannel);
+                k = 1:numel(Queue(1).Drift);
             end 
             aObjects = [];
         else
-            k = Queue(1).TformChannel{1}(3,3);
+            k = Queue(1).Channel;
             aTimeInfo = TimeInfo;
             aStack = Stack;
         end

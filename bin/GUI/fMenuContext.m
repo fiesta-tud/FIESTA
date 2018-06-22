@@ -299,17 +299,21 @@ fRightPanel('UpdateMeasure',hMainGui);
 
 function DeleteObject(hMainGui)
 global Objects;
-n=get(gco,'UserData');
-Objects{hMainGui.Values.FrameIdx}.center_x(n)=[];
-Objects{hMainGui.Values.FrameIdx}.center_y(n)=[];
-Objects{hMainGui.Values.FrameIdx}.com_x(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.com_y(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.orientation(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.length(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.width(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.height(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.background(:,n)=[];
-Objects{hMainGui.Values.FrameIdx}.data(n)=[];
+data=get(gco,'UserData');
+nCh = data(1);
+n = data(2);
+Obj = Objects{hMainGui.Values.FrameIdx(nCh+1)};
+Obj.center_x(n)=[];
+Obj.center_y(n)=[];
+Obj.com_x(:,n)=[];
+Obj.com_y(:,n)=[];
+Obj.orientation(:,n)=[];
+Obj.length(:,n)=[];
+Obj.width(:,n)=[];
+Obj.height(:,n)=[];
+Obj.background(:,n)=[];
+Obj.data(n)=[];
+Objects{hMainGui.Values.FrameIdx(nCh+1)} = Obj;
 fShow('Marker',hMainGui,hMainGui.Values.FrameIdx);  
 
 function DeleteOffset(hMainGui)
@@ -365,7 +369,7 @@ global Objects;
 global Molecule;
 global Filament;
 Mode=get(gcbo,'UserData');
-n=get(gco,'UserData');
+data=get(gco,'UserData');
 if strcmp(Mode{1},'Molecule')
     Object=Molecule;
 else
@@ -374,9 +378,9 @@ end
 nObj=length(Object);
 kObj=[];
 kData=[];
-frame_idx = getFrameIdx(hMainGui);
-nCh = frame_idx(1);
-frame_idx = frame_idx(2);
+nCh = data(1);
+n = data(2);
+frame_idx = hMainGui.Values.FrameIdx(nCh+1);
 if strcmp(Mode{2},'New')==1
     Object(nObj+1).Selected=0;
     Object(nObj+1).Visible=1;
@@ -386,7 +390,6 @@ if strcmp(Mode{2},'New')==1
     Object(nObj+1).Color=[0 0 1];
     Object(nObj+1).Drift=0;
     Object(nObj+1).Channel=nCh(1);
-    Object(nObj+1).TformMat=hMainGui.Values.TformChannel{nCh(1)};
     Object(nObj+1).PixelSize=Config.PixSize;
     kObj=nObj+1;
     kData=1;

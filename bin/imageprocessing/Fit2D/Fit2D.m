@@ -97,16 +97,6 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
   % load images from the global scope
   global pic bw;
   
-  % get bounds of guessed positions (integer values should refer to the center
-  % of pixels!) to estimate the fitting region
-  tl = [  Inf  Inf ];  % top left point
-  br = [ -Inf -Inf ];  % bottom right point
-  for i = 1:num_points
-    bounds = fit_model{i}.bounds;
-    tl = min( [ tl ; bounds(1:2) ] );
-    br = max( [ br ; bounds(3:4) ] );
-  end
-
   % check given parameter fit_size
   if ~isfield( params, 'fit_size' ) || params.fit_size <= 0
     error( 'MPICBG:FIESTA:notEnoughParameters', ...
@@ -115,9 +105,10 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
 
   % add (possible real valued) fit_size to bounds to make sure necessary data
   % for fitting is inside the region of interest (ROI)
-  tl = tl - params.fit_size;
-  br = br + params.fit_size;
-  
+  bounds = fit_model{1}.bounds;
+  tl = round(bounds(1:2) - params.fit_size);
+  br = round(bounds(3:4) + params.fit_size);
+
   % confine ROI to image (integer values should refer to the center of pixels)
   tl( tl < 1 ) = 1; % top and left side
   if br(1) > size( pic, 2 ) % bottom side
@@ -129,7 +120,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
 
   % save information about region of interest in a struct to pass it to the models. 
   % round the rectangle, because we need interger values for cropping
-  data = struct( 'rect', [ round(tl)  round(br)-round(tl) ] ); 
+  data = struct( 'rect', [ round(tl)  round(br)-round(tl) ], 'center', []); 
   data.offset = data.rect(1:2) - 1; %<< offset between the original and the cropped image
 
   % crop image and store it in global variable
@@ -143,7 +134,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
   % estimate background level if necessary
   if isfield( params, 'background' ) % take given background level
     if isnan(params.background)
-      data.background = mean( [ fit_pic(1,:) fit_pic(end,:) transpose( fit_pic(:,1) ) transpose( fit_pic(:,end) ) ] );
+      data.background = median( [ fit_pic(1,:) fit_pic(end,:) transpose( fit_pic(:,1) ) transpose( fit_pic(:,end) ) ] );
     else
       data.background = params.background;
     end
@@ -165,6 +156,11 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
   lb(1) = 0.0;                   %<< lower bound for each parameter
   ub(1) = Inf;                   %<< upper bound for each parameter
 
+  % save center for calculation of lower and upper bounds
+  if num_points > 1
+      data.center = mean(guess(1).x,1);
+  end
+  
   for i = 1:num_points % run through all models
     % get model parameters
     [ fit_model{i}, x0_m, dx_m, lb_m, ub_m ] = getParameter( fit_model{i}, data );
@@ -246,11 +242,9 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
   end
 
   % construct points out of parameters array
-  value = struct( 'x', {}, 'o', {}, 'w', {}, 'h', {}, 'r', {} ,'b', {} );
   data.background = double_error( x(1), xe(1) );  % save background
-  for i = 1:num_points
-    value(i) = transformResult( fit_model{i}, x(ids(i):ids(i+1)-1), xe(ids(i):ids(i+1)-1), data );
-  end
+  
+  value = transformResult( fit_model{1}, x(ids(1):ids(2)-1), xe(ids(1):ids(2)-1), data );
   
   % save region used for fitting
   region = [ data.rect(2) data.rect(1) data.rect(2)+data.rect(4) data.rect(1)+data.rect(3) ];
@@ -293,8 +287,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
   
     % set options for fitting
     options = params.options;
-
-    options.TypcialX = dx;
+    options.TypicalX = dx;
     
     % set used methode
     if largescale
@@ -424,7 +417,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
                         temp = ( xg - x1 ) * cos(a) + (  yg - y1  ) * sin(a);
                         temp = temp / norm([x2-x1 y2-y1]);
                     else
-                        temp = ( xg - x1 ) * cos(a) + (  yg - y1  ) * sin(a);
+                        temp = ( xg - x1 ) + (  yg - y1  ) ;
                     end
                     temp( temp > 1 ) = 1;
                     temp( temp < 0 ) = 0;
@@ -444,7 +437,7 @@ function [ value, CoD, region ] = Fit2D( modelstr, guess, params, bw_id )
     if nargout == 1 % only function value requested
       
       f = fit_pic - x(1); % first subtract background
-
+      
       % than subtract contribution of each model
       for i_m = 1:numel(fit_model)
         f = f - w(:,i_m).*evaluate( fit_model{i_m}, x(ids(i_m):ids(i_m+1)-1) );

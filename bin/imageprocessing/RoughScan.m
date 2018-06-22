@@ -249,34 +249,29 @@ function objects = FindLineObjects( region_stats, params )
   objects = struct( 'p', {} );
   
   EMPTY_POINT = struct( 'x', {}, 'o', {}, 'w', {}, 'h', {}, 'r', {} , 'b', {});
-
-  bw_thin = zeros( size(region_stats.Image) + 2 );
-  bw_thin(2:end-1,2:end-1) = region_stats.Image;
+  
+  
+  bw_image = zeros( size(region_stats.Image) + 2 );
+  bw_image(2:end-1,2:end-1) = region_stats.Image;
   image = zeros( size(region_stats.Image) + 2 );
   image(2:end-1,2:end-1) = pic(region_stats.BoundingBox(2)+0.5:region_stats.BoundingBox(2)+region_stats.BoundingBox(4)-0.5,...
                                region_stats.BoundingBox(1)+0.5:region_stats.BoundingBox(1)+region_stats.BoundingBox(3)-0.5);
-                 
-  bw_thin = bwmorph(bw_thin,'thin',Inf);
   
+  bw_thin = bwmorph(bw_image,'thin',Inf);
+
   % count surrounding pixels for feature detection
   kernel = [ 1 1 1 ; 1 0 1 ; 1 1 1 ];
   bw_feat = bw_thin  .* conv2( double(bw_thin), kernel, 'same' );
-  crossings = bw_thin  .* conv2( double(bw_feat>2), kernel, 'same' );
-  bw_feat = bw_feat + double( crossings > 1 );
-  
-  image( crossings > 0 ) = NaN;
-  image(2:end-1,2:end-1) = conv2( image(2:end-1,2:end-1) , fspecial( 'average', 3 ), 'same' );
   
   %figure; imshow( bw_feat, [] );
   
   [ ey, ex ] = find( bw_feat == 1 ); % find endpoints
-  [ cy, cx ] = find( bw_feat  > 2 ); % find crossings
    
 %   for jkl=1:numel(cx)
 %     PlotPoints( [cx(jkl) cy(jkl)] + region_stats.BoundingBox(1:2)-1.5, 'g' );
 %   end
   
-  if numel(cx) == 0 % no crossings!
+  if numel(ex) < 3 % no crossings!
     
     if numel(ex) <= 1 % must be a point-like object
       if params.find_beads
@@ -288,21 +283,27 @@ function objects = FindLineObjects( region_stats, params )
     end
     % add whole chain to object array
     chains{1} = getPointChain( ex(1), ey(1) );
-    %add last point
-    chains{1}(end+1,1:2) = [ ex(2) ey(2) ];
     
   else % there are crossings
-    
+    bw_thin = refineSkeleton( bw_image, image);
+    bw_feat = bw_thin  .* conv2( double(bw_thin), kernel, 'same' );
+    bw_thin(bwmorph(bw_thin,'endpoints')==1 & bw_feat>1) = 0;
+    bw_feat = bw_thin  .* conv2( double(bw_thin), kernel, 'same' );
+    [crossings,num_cr] = bwlabel(bw_thin  .* conv2( double(bw_feat>2), ones(round( 4 * params.object_width ) + 1), 'same' ));  
+    bw_feat(crossings>0 & bw_feat==2) = 3;
+    [ ey, ex ] = find( bw_feat == 1 );
+      
     chains = cell( 1, numel(ex) );
     
     % find clusters starting at end points
     % each end point has his own chain - there are no endpoints connected
     % directly!
-    chain_feat = bw_feat;
+    chain_feat = bw_thin  .* conv2( double(bw_feat>0 & bw_feat<3),ones(3),'same');
     for k = 1 : numel(ex)
       chains{k} = getPointChain( ex(k), ey(k) );
-      chain_feat(chains{k}(:,2),chains{k}(:,1))=0;
+      chain_feat(chains{k}(1:end-1,2),chains{k}(1:end-1,1))=0;
     end
+    
 %     backup_feat = bw_feat;
 %     bw_feat(bw_feat~=2)=0;
 %     while ~isempty(find(chain_feat==2,1))
@@ -313,36 +314,49 @@ function objects = FindLineObjects( region_stats, params )
 %     end
 %     bw_feat = backup_feat;
     % find clusters of crossings
-    c = [ cx cy ];
-
-    c_idx = getClusters( c, 1.5, 'max' );
-    
+    center = zeros(num_cr,2);
+    for cur_idx = 1:num_cr
+        cr_image = image(crossings == cur_idx);
+        [ cy, cx ] = find(crossings == cur_idx);
+        [~,midx] = max(cr_image);
+        center(cur_idx,:) = [mean(cx(midx)) mean(cy(midx))];
+    end    
+    c_idx = getClusters( center, 4*params.object_width, 'max' );
+    % add clusters of crossings together 
+    if max(c_idx)<num_cr
+        for cur_idx = 1:num_cr
+            crossings(crossings == cur_idx) = c_idx(cur_idx);
+        end
+        % remove chains between them
+        [chain_label,num_ch] = bwlabel(chain_feat>0);
+        for ch_idx = 1:num_ch
+            end_cr = crossings(chain_label == ch_idx & crossings > 0);
+            if numel(end_cr)~=numel(unique(end_cr))
+                chain_feat(chain_label == ch_idx) = 0;
+                image(chain_label == ch_idx) = NaN;
+            end
+        end
+    end
     for cur_idx = unique(c_idx) % run through all clusters
       % find crossings in this cluster
-      f = find( c_idx == cur_idx );
-      center = mean( c(f,:), 1 ); % center of cluster
-      
-%       PlotPoints( center + region_stats.BoundingBox(1:2)-1.5, 'g' );
-      
+      [ cy, cx ] = find(crossings == cur_idx);
+      center = [mean(cx) mean(cy)];
+      cI = image(crossings == cur_idx);
+      [~,midx] = max(cI);
+      cr_image = [cx(midx) cy(midx)];
+        
+      [ cy, cx ] = find(crossings == cur_idx & chain_feat>0);
+     % center = [mean(cx) mean(cy)];
+
+      image(crossings == cur_idx & chain_feat==0) = NaN;
       % find attached chains for all points in cluster
-      a = []; % attached points leading to chains
       % 1: x - coordinate
       % 2: y - coordinate
       % 3: index of chain
-      % 4: orientation of chain towards the center
-      for i = f
-        [ dy, dx ] = find( bw_feat(cy(i)-1:cy(i)+1,cx(i)-1:cx(i)+1) < 3 & ...
-                           bw_feat(cy(i)-1:cy(i)+1,cx(i)-1:cx(i)+1) > 0 );
-        a = [ a ; cx(i) + dx - 2 ...        % x - coordinate
-                  cy(i) + dy - 2 ...        % y - coordinate
-                  zeros( numel(dx), 1 ) ];  % reserved space
-      end
-      a = unique( a, 'rows' );
-      
-%       for jkl=1:size(a,2)
-%         PlotPoints( a(jkl,1:2) + region_stats.BoundingBox(1:2)-1.5, 'g' );
-%       end
-      
+      % 4: x - vector chain towards the center
+      % 5: y - vector chain towards the center
+      a = [cx cy zeros(numel(cy),3)];
+     
       % check if one of the attached points is the end of already found
       % chain or otherwise find the whole chain
       for a_i = 1 : size( a, 1 )
@@ -365,21 +379,22 @@ function objects = FindLineObjects( region_stats, params )
           % for the chain. This is done using a suitable kernel for the
           % getPointChain()-function.
           ker = bw_feat;
-          for c_i = f % remove points of center cluster
-            ker(cy(c_i),cx(c_i)) = 0;
-          end
+          ker(ker>2) = 0;
           ker = ker(a(a_i,2)-1:a(a_i,2)+1,a(a_i,1)-1:a(a_i,1)+1) > 0; % grab kernel
-          ker(2,2) = 0; % remove central point
           chains{end+1} = flipud(getPointChain( a(a_i,1), a(a_i,2), ker )); % find chain
 %           chains{end} = chains{end}(end:-1:1,:); % invert chain, such that our point is always in the last position
           [ c_id, a(a_i,3) ] = deal( numel(chains) ); % store index
         end
-        
-        % calculate orientation for each chain
-        len = min( size( chains{c_id}, 1 ), round( 2 * params.object_width ) ) - 1;
-        a(a_i,4) = atan2( chains{c_id}(end-len,2) - center(2), ...
-                          chains{c_id}(end-len,1) - center(1) );
+        % calculate orientation vector for each chain
+        len = min( size( chains{c_id}, 1 ) -1, round( 8 * params.object_width ) );
+        Nx = chains{c_id}(end-len:end,1) - center(1);
+        Ny = chains{c_id}(end-len:end,2) - center(2);
+        Nv = [Nx./sqrt(Nx.^2+Ny.^2) Ny./sqrt(Nx.^2+Ny.^2)];
+        a(a_i,4:5) = [mean(Nv(:,1)) mean(Nv(:,2))];
+        chains{c_id} = [chains{c_id}; center];  
       end
+      [~,ua_id,~] = unique(a(:,3));
+      a = a(ua_id,:);
       
 %       PlotOrientations( a( :, [1 2 4 ] ) );
       
@@ -387,31 +402,59 @@ function objects = FindLineObjects( region_stats, params )
       % this by looking at the differences in orientation
 
       % build correlation matrix
-      angle_max = pi/2;
-      angles = mod( repmat( a(:,4)', size(a,1), 1 ) - repmat( a(:,4), 1, size(a,1) ) + pi, 2*pi );
+      AX = repmat( a(:,4)', size(a,1), 1 );
+      AY = repmat( a(:,5)', size(a,1), 1 );
+      BX = repmat( a(:,4), 1, size(a,1));
+      BY = repmat( a(:,5), 1, size(a,1));
+      V = (AX.*BX+AY.*BY)./(sqrt(AX.^2+AY.^2).*sqrt(BX.^2+BY.^2));
+      V(V>1) = 1;
+      angles = triu(acos(V),1);
+      %angles = mod( repmat( a(:,4)', size(a,1), 1 ) - repmat( a(:,4), 1, size(a,1) ) + pi, 2*pi );
 
-      while true % run until there are no correlated chunks anymore
-        [ a_min, x ] = min( angles );
-        [ a_min, y ] = min( a_min );
-        if a_min >= angle_max % no correlated chunks anymore => break
+      while true && ~isempty( angles )% run until there are no correlated chunks anymore
+        [ a_max, x ] = max( angles );
+        [ a_max, y ] = max( a_max );
+        if isinf(a_max) % no correlated chunks anymore => break                 
           break;
         end
         y = y(1);
         x = x(y);
-        i1 = round( a(x,3) );
-        i2 = round( a(y,3) );
-        % connect chain x and y
-        chains{i1} = [ chains{i1} ; chains{i2}(end:-1:1,:) ];
-        chains{i2} = []; % set other chain to empty
-        
+        if x == y
+            i1 = round( a(x,3) );
+            chains{i1} = unique([ chains{i1}(1:end-1,:); cr_image],'rows');
+        else
+            i1 = round( a(x,3) );
+            i2 = round( a(y,3) );
+            % connect chain x and y
+            chains{i1} = unique([ chains{i1}(1:end-1,:); 0.5*(chains{i1}(end-1,1:2)+chains{i2}(end-1,1:2)); chains{i2}(end-1:-1:1,:) ],'rows');
+            chains{i2} = []; % set other chain to empty
+        end
         % set entries to Inf, such that these chains are not connected anymore
-        angles( [ x y ], : ) = Inf;
-        angles( :, [ x y ] ) = Inf;
+        angles( [ x y ], : ) = -Inf;
+        angles( :, [ x y ] ) = -Inf;
       end
       
     end % of run through all clusters
   end % of choice, if there are crossings in object
-
+  
+  function new_thin = refineSkeleton( bw, image)
+    image(2:end-1,2:end-1) = conv2( image(2:end-1,2:end-1) , fspecial( 'average', 3 ), 'same' );
+    imax = bw .* imregionalmax(image,4)==1;  
+    new_thin = bwmorph( bw, 'thin', 1);
+%     while all(new_thin(imax)) && any(any(bw~=new_thin))
+%         bw = new_thin;
+%         new_thin = bwmorph( bw, 'thin', 1);
+%     end
+    new_thin = bw - new_thin;
+    I = min(image(new_thin==1));
+    while ~isempty(I)
+        bw(image==I & new_thin==1) = 0;
+        new_thin = bw - bwmorph( bw,'thin',1);
+        I = min(image(new_thin==1));
+    end
+    new_thin = bwmorph( bw,'thin',1);
+  end
+    
   function points = getPointChain( x, y, firstkernel )
     % uses 'kernel' and 'bw_feat' from parent function
     
@@ -436,7 +479,9 @@ function objects = FindLineObjects( region_stats, params )
       x = x + dx - 2;
       y = y + dy - 2;
     end
-   
+    if ~isempty(x)
+        points(end+1,1:2) = [ x y ];
+    end
   end
 
   % cleanup: delete empty chains
@@ -448,38 +493,39 @@ function objects = FindLineObjects( region_stats, params )
       i = i + 1;
     end
   end
-
+  %image(2:end-1,2:end-1) = conv2( image(2:end-1,2:end-1) , fspecial( 'average', 3 ), 'same' );
   % store chain information in objects struct
   objects = repmat( struct( 'p', EMPTY_POINT ), 1, numel(chains) ); % init & preallocate
   for i = 1:numel(chains) % run through chains
     
     if size( chains{i}, 1 ) > 1 % elongated object
-
-      if norm([chains{i}(end,1)-chains{i}(1,1) chains{i}(end,2)-chains{i}(1,2)]) < params.short_object_threshold
-        % convert to small filament if its a short chain
-        chains{i} = [ chains{i}(1,:) ; chains{i}(end,:) ]; %#ok<AGROW>
-      else
-        % otherwise average the whole chain
-        chains{i} = AverageChain( chains{i}, round( params.object_width ) ); %#ok<AGROW>
-      end
-      
       height = image(sub2ind(size(image),round(chains{i}(:,2)),round(chains{i}(:,1))));
-      height = mean(height(~isnan(height)));
+      height = median(height(~isnan(height)));
+      chains{i} = AverageChain( chains{i}, 4*params.object_width, params.short_object_threshold );    
       for k = 1:size( chains{i}, 1 ) % run through all points of chain
         % add offset of region and remove 1 because of extended image array
         objects(i).p(k).x = chains{i}(k,1:2) + region_stats.BoundingBox(1:2) - 1.5;
         objects(i).p(k).w = 2.77258872223978 / params.fwhm_estimate^2;
         objects(i).p(k).b = NaN;
+        objects(i).p(k).o = NaN;
         % calculate orientation
-        dist2 = (chains{i}(k,1) - chains{i}(:,1)).^2 + (chains{i}(k,2) - chains{i}(:,2)).^2;
-        angle = zeros(size( chains{i}, 1 ),1);
-        angle(k:end) = atan2( chains{i}(k:end,2) - chains{i}(k,2), chains{i}(k:end,1) - chains{i}(k,1) );
-        angle(1:k) = atan2( chains{i}(k,2) - chains{i}(1:k,2), chains{i}(k,1) - chains{i}(1:k,1));
-        dist2(k)=[];
-        angle(k)=[];
-        weights = exp(-dist2/(2*params.object_width^2));
-        weights = weights / sum(weights);
-        objects(i).p(k).o = sum(weights.*unwrap(angle));
+        if k == 1 && ~isnan(chains{i}(k,3)) 
+           AX = chains{i}(k,1)-chains{i}(k+1,1);
+           AY = chains{i}(k,2)-chains{i}(k+1,2);
+           BX = chains{i}(k,3);
+           BY = chains{i}(k,4);
+           V = (AX.*BX+AY.*BY)./(sqrt(AX.^2+AY.^2).*sqrt(BX.^2+BY.^2)); 
+           objects(i).p(k).o = atan2(chains{i}(k,4),chains{i}(k,3)) + round(acos(V)/pi)*pi;
+        elseif k == size( chains{i}, 1 ) && ~isnan(chains{i}(k,3)) 
+           AX = chains{i}(end,1)-chains{i}(end-1,1);
+           AY = chains{i}(end,2)-chains{i}(end-1,2);
+           BX = chains{i}(end,3);
+           BY = chains{i}(end,4);
+           V = (AX.*BX+AY.*BY)./(sqrt(AX.^2+AY.^2).*sqrt(BX.^2+BY.^2)); 
+           objects(i).p(k).o = atan2(chains{i}(k,4),chains{i}(k,3)) + round(acos(V)/pi)*pi;
+        else
+            objects(i).p(k).o = atan2(chains{i}(k,4),chains{i}(k,3));
+        end
         objects(i).p(k).h = height;
       end
     else % point-like object
@@ -494,7 +540,7 @@ end
 %% IMAGE FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function chain = AverageChain( chain, a, closed )
+function chain = AverageChain( chain, a, short_filament, closed )
 %AVERAGECHAIN takes a whole list of points and averages them with a running mean
 %filter. The length of the filter is 'a'. The function can handle both closed
 %and open chains.
@@ -506,57 +552,91 @@ function chain = AverageChain( chain, a, closed )
 % results:
 %   chain   an array of the same size as the input
 
-  if nargin < 3
+  if nargin < 4
     closed = false;
   end
   
   if isstruct( chain )
-    
+    offset = 0;
     % setup expanded list
     x = tranpose( reshape( [ chain.x ], 2, [] ) );
 %     x = getfields( chain, {}, 'x', {1:2} );
     if closed
       x = [ x(end-a+1:end,1:2) ; x ; x(1:a,1:2) ];
-      idx = a;
+      offset = a;
     end
-    x(:,1) = smooth(x(:,1),2*a+1);
-    x(:,2) = smooth(x(:,2),2*a+1);
-
-    % average using a mean filter
-    o = [ chain.o ];
-    if closed
-      o = [ o(end-a+1:end) o o(1:a) ];
-    end
-    o = smooth(unwrap(o),2*a+1);
-    for i = 1:numel(chain)
-      chain(i).x = x( a+i+idx, 1:2 );
-      chain(i).o = o( a+i+idx );
+    idx = 1:size(x,1);
+    for n = 1:size(x,1)
+       d = sqrt( (x(:,1)-x(n,1)).^2 + (x(:,2)-x(n,2)).^2);
+       bidx = idx(d<a);
+       id1 = max(min(bidx)-1,1);
+       id2 = min(max(bidx)+1,max(idx));
+       X =  x(id1:id2,1:2);
+       d = d(id1:id2);
+       pidx = find(d==0,1);
+       [c,s] = pca(X);
+       meanX = mean(X,1);
+       chain(n-offset).x = meanX+s(pidx,1)*c(:,1)';
+       chain(n-offset).o = atan(c(2,1)/c(1,1));
     end
     
   else % chain is no structure, but ordinary array
-    idx=0;
+    offset = 0;
     % setup expanded list      
     x = chain( :, 1:2 );  
+    % get points with roughly 1 pixel spacing
+    cd = [0; cumsum(sqrt( (x(2:end,1)-x(1:end-1,1)).^2 + (x(2:end,2)-x(1:end-1,2)).^2))];
+    pi = 0:max(cd)/round(max(cd)):max(cd);
+    chain = interp1(cd,x,pi');
+    x = chain( :, 1:2 );  
+    chain = [chain zeros(size(chain,1),2)];
+    chain2 = chain;
     if closed
       x = [ x(end-a+1:end,1:2) ; x ; x(1:a,1:2) ];
-      idx = a;
+      offset = a;
     end
-    % smooth parametric curve
-    x(:,1) = smooth(x(:,1),2*a+1);
-    x(:,2) = smooth(x(:,2),2*a+1);
-
-    if size( chain, 2 ) > 2
-      o = chain( :, 3 );
-      if closed
-        o = [ o(end-a+1:end) ; o ; o(1:a) ];
-      end
-      o = smooth(unwrap(o),2*a+1);
-      chain = [ x(idx+1:end-idx, 1:2 ) o( idx+1:end-idx ) ];
+    idx = 1:size(x,1);
+    for n = 1:size(chain,1)
+       d = sqrt( (x(:,1)-x(n,1)).^2 + (x(:,2)-x(n,2)).^2);
+       bidx = idx(d<a);
+       id1 = max(min(bidx)-1,1);
+       id2 = min(max(bidx)+1,size(x,1));
+       X =  x(id1:id2,1:2);
+       d = d(id1:id2);
+       pidx = find(d==0,1);
+       vecdata = fastPCA(X,pidx);
+       chain(n-offset,:) = vecdata;
+    end
+    % get points with roughly 1 pixel spacing
+    cd = [0; cumsum(sqrt( (chain(2:end,1)-chain(1:end-1,1)).^2 + (chain(2:end,2)-chain(1:end-1,2)).^2))];
+    if max(cd) < short_filament || max(cd) < a
+        chain = [chain(1,1:2) NaN NaN; chain(end,1:2) NaN NaN];
     else
-      chain = x(idx+1:end-idx, 1:2 );
+        num_points = round(max(cd)/(1.5*a));
+        if num_points < 1
+            chain = [chain(1,:); chain(end,:)];
+        else
+            pi = 0:max(cd)/(num_points+1):max(cd);
+            chain = interp1(cd,chain,pi');
+        end     
     end
-    
   end
+end
+
+function vecdata = fastPCA(data,idx)
+  meanX = mean(data,1);
+  data(:,1) = data(:,1)-meanX(1);
+  data(:,2) = data(:,2)-meanX(2);
+  C = cov(data);
+  [V,~] = eig(C);
+  [~,maxind] = max(abs(V), [], 1); 
+  [d1, d2] = size(V); 
+  colsign = sign(V(maxind + (0:d1:(d2-1)*d1))); 
+  V(:,1) = V(:,1)*colsign(1);
+  V(:,2) = V(:,2)*colsign(2);
+  NV = V(:,2)';
+  scprod = data(idx,1)*NV(1) + data(idx,2)*NV(2);
+  vecdata = [meanX(1)+scprod*NV(1) meanX(2)+scprod*NV(2) NV(1) NV(2)];  
 end
 
 function [bw,pic] = GlobalImage2Binary( pic, params )
@@ -568,12 +648,10 @@ function [bw,pic] = GlobalImage2Binary( pic, params )
      p.threshold = params.threshold(n);
      [p.binary_image_processing,p.background_filter] = strtok(params.background_filter{n},'+'); 
      I = Image2Binary(pic(:,:,n), p);
-     if idx~=n
-         if n>1 
-           I = quickwarp(I,params.transform{n},0);
-         end
+     if idx~=n       
+         I = quickwarp(I,params.drift(:,:,n),0);
          if idx>1
-           I = quickwarp(I,params.transform{idx},1);
+           I = quickwarp(I,params.drift(:,:,idx),1);
          end
      end
      Image(:,:,n) = I;

@@ -548,7 +548,7 @@ if get(hExportViewGui.cFilMarker,'Value')
     set(hExportViewGui.eFilMarkerSize ,'Enable','on');  
     w = str2double(get(hExportViewGui.eFilMarkerSize,'String'));
     if ~isnan(w) && w>5 && w<101
-        set(findobj('Tag','pObjects','-and','Marker','x'),'MarkerSize',w,'LineWidth',0.5+w/12,'Visible','off');
+        set(findobj('Tag','pObjects','-and','Marker','x'),'MarkerSize',w,'LineWidth',0.5+w/12,'Visible','on');
     end
 else 
     set(hExportViewGui.tFilMarkerSize ,'Enable','off');

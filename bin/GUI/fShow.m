@@ -3,9 +3,7 @@ switch(func)
     case 'Image'
         ShowImage;
     case 'Tracks'
-        ShowTracks;
-    case 'OffsetMap'
-        ShowOffsetMap(varargin{1});        
+        ShowTracks;     
     case 'Marker'
         ShowMarker(varargin{1},varargin{2});   
     case 'SelectChannel'
@@ -16,6 +14,7 @@ function ShowImage
 global Stack;
 global Config;
 hMainGui=getappdata(0,'hMainGui');
+Drift=getappdata(hMainGui.fig,'Drift');
 if ~isempty(Stack)
     y=size(Stack{1},1);
     x=size(Stack{1},2);
@@ -46,6 +45,8 @@ if ~isempty(Stack)
                 else
                     stidx = 1:hMainGui.Values.MaxIdx(1);
                 end
+                delete(findobj(hMainGui.MidPanel.aView,'Tag','pObjects'));
+                delete(findobj(hMainGui.MidPanel.aView,'Tag','pCorrections'));
             case -2 %Average
                 Image=double(getappdata(hMainGui.fig,'AverageImage'));
                 if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
@@ -53,8 +54,10 @@ if ~isempty(Stack)
                 else
                     stidx = 1:hMainGui.Values.MaxIdx(1);
                 end
-            case -3   
-                if strcmp(get(hMainGui.ToolBar.ToolNormImage,'State'),'on') && ~strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'on')
+                delete(findobj(hMainGui.MidPanel.aView,'Tag','pObjects'));
+                delete(findobj(hMainGui.MidPanel.aView,'Tag','pCorrections'));
+            case -3  %Z-Projection
+                if strcmp(get(hMainGui.ToolBar.ToolNormImage,'State'),'on')
                     Image=zeros(y,x,3);
                     MaxImage = getappdata(hMainGui.fig,'MaxImage');
                     Image(:,:,1)=MaxImage(:,:,stidx);
@@ -62,25 +65,25 @@ if ~isempty(Stack)
                     Image(:,:,3)=Image(:,:,1);
                     Image(:,:,1)=double(Stack{stidx}(:,:,1));
                     Image(:,:,2)=double(Stack{stidx}(:,:,end));
-                else
-                    Image = double(Stack{stidx}(:,:,1));
                 end
         end
     end
-    if (strcmp(get(hMainGui.Menu.mAlignChannels,'Checked'),'on')&&strcmp(get(hMainGui.Menu.mAlignChannels,'Enable'),'on'))||(strcmp(get(hMainGui.ToolBar.ToolThreshImage,'State'),'on')&&~isempty(hMainGui.Values.PostSpecial)&&~strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'on'))
+    if (strcmp(get(hMainGui.Menu.mApplyCorrections,'Checked'),'on')&&strcmp(get(hMainGui.Menu.mApplyCorrections,'Enable'),'on'))||(strcmp(get(hMainGui.ToolBar.ToolThreshImage,'State'),'on')&&~isempty(hMainGui.Values.PostSpecial)&&~strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'on'))
         for n = 1:length(stidx)
-            if stidx(n)>1
-                T = hMainGui.Values.TformChannel{stidx(n)};
+            if ~isempty(Drift{stidx(n)}) && all(idx>0)
+                fidx =  min([idx(n) size(Drift{stidx(n)},3)]);
+                T = Drift{stidx(n)}(:,:,fidx);
                 Image(:,:,n) = quickwarp(Image(:,:,n),T,0);
-            end
-            if hMainGui.Values.FrameIdx(1)>1 && ~strcmp(get(hMainGui.Menu.mAlignChannels,'Checked'),'on') && strcmp(get(hMainGui.ToolBar.ToolThreshImage,'State'),'on')&&~isempty(hMainGui.Values.PostSpecial)
-                T = hMainGui.Values.TformChannel{hMainGui.Values.FrameIdx(1)};
-                Image(:,:,n) = quickwarp(Image(:,:,n),T,1);
+                if hMainGui.Values.FrameIdx(1)>1 && ~strcmp(get(hMainGui.Menu.mApplyCorrections,'Checked'),'on') && strcmp(get(hMainGui.ToolBar.ToolThreshImage,'State'),'on')&&~isempty(hMainGui.Values.PostSpecial)
+                    fidx =  min([idx(n) size(Drift{hMainGui.Values.FrameIdx(1)},3)]);
+                    T = Drift{hMainGui.Values.FrameIdx(1)}(:,:,fidx);
+                    Image(:,:,n) = quickwarp(Image(:,:,n),T,1);
+                end
             end
         end
     end
     if strcmp(get(hMainGui.ToolBar.ToolNormImage,'State'),'on')||strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'on')
-        if size(Image,3)==1
+        if size(Image,3)==1 || (size(Image,3)==3 && length(stidx)==1)
             Image=(Image-hMainGui.Values.ScaleMin(stidx))/(hMainGui.Values.ScaleMax(stidx)-hMainGui.Values.ScaleMin(stidx)+1);
         else
             IRGB = zeros(size(Image,1),size(Image,2),3);
@@ -148,8 +151,8 @@ if ~isempty(Stack)
     if min(idx) == -4 
         ShowAllMarkers(hMainGui)
     end
-    if strcmp(get(hMainGui.Menu.mShowOffsetMap,'Checked'),'on')
-        ShowOffsetMap(hMainGui);
+    if strcmp(get(hMainGui.Menu.mShowCorrections,'Checked'),'on')
+        ShowCorrections(hMainGui,Image);
     end
     set(hMainGui.MidPanel.aView,{'xlim','ylim'},hMainGui.ZoomView.currentXY,'Visible','off');
     if ~isempty(hMainGui.Scan)
@@ -205,7 +208,7 @@ if ~isempty(Stack)
                             X = ones(2,1) * double(Objects{idx(nCh)}.center_x(kMol)) / hMainGui.Values.PixSize;
                             Y = ones(2,1) * double(Objects{idx(nCh)}.center_y(kMol)) / hMainGui.Values.PixSize;
                             h=line(hMainGui.MidPanel.aView,X,Y,'Marker','+','Tag','pObjects','Color','g','MarkerSize',8,'Linewidth',1);
-                            set(h,'UIContextMenu',hMainGui.Menu.ctObjectMol,{'UserData'},num2cell(kMol)');
+                            set(h,'UIContextMenu',hMainGui.Menu.ctObjectMol,{'UserData'},mat2cell([ones(size(kMol))'*nCh kMol'],ones(size(kMol)),2));
                         end
                     end
                 end
@@ -223,7 +226,7 @@ if ~isempty(Stack)
                             X = ones(2,1) * Objects{idx(nCh)}.center_x(kFil) / hMainGui.Values.PixSize;
                             Y = ones(2,1) * Objects{idx(nCh)}.center_y(kFil) / hMainGui.Values.PixSize;        
                             h=line(hMainGui.MidPanel.aView,X,Y,'Marker','x','Tag','pObjects','Color','g','MarkerSize',8,'Linewidth',1);
-                            set(h,'UIContextMenu',hMainGui.Menu.ctObjectFil,{'UserData'},num2cell(kFil)');
+                            set(h,'UIContextMenu',hMainGui.Menu.ctObjectFil,{'UserData'},mat2cell([ones(size(kFil))'*nCh kFil'],ones(size(kFil)),2));
                         end
                     end
                 end
@@ -318,17 +321,17 @@ for n=length(Object):-1:1
     end
     if Object(n).Selected==1
         marker='s';
-        line = '-.';
+        line_style = '-.';
     else
         marker='none';  
-        line = '-';
+        line_style = '-';
     end
     if Object(n).Visible==0
         marker = 'none';
-        line = '-';
+        line_style = '-';
     end
-    Object(n).PlotHandles(1) = plot(hMainGui.MidPanel.aView,X,Y,'Color',Object(n).Color,'Tag','pTracks','Visible','on',...
-                                'Marker',marker,'MarkerIndices',1:5:length(Y),'LineStyle',line,'MarkerEdgeColor',[0 0.34 0.59],'MarkerFaceColor',[0.75 0.91 1]);       
+    Object(n).PlotHandles(1) = line(hMainGui.MidPanel.aView,X,Y,'Color',Object(n).Color,'Tag','pTracks','Visible','on',...
+                                'Marker',marker,'MarkerIndices',1:5:length(Y),'LineStyle',line_style,'MarkerEdgeColor',[0 0.34 0.59],'MarkerFaceColor',[0.75 0.91 1]);       
 end
 Visible=[Object.Visible];
 Track=[Object.PlotHandles];
@@ -353,19 +356,37 @@ if ~isempty(Track) && all(ishandle(Track))
     end
 end
 
-function ShowOffsetMap(hMainGui)
-OffsetMap=getappdata(hMainGui.fig,'OffsetMap');
-delete(findobj('Tag','pOffset'));
-for n = 1:length(OffsetMap)
-    if strcmp(get(hMainGui.Menu.mAlignChannels,'Checked'),'on')
-        T = OffsetMap(n).T;
-        T(:,3) = [0;0;1];
-        [OffsetMap(n).Match(:,3),OffsetMap(n).Match(:,4)] = transformPointsForward(affine2d(T),OffsetMap(n).Match(:,3),OffsetMap(n).Match(:,4));
+function ShowCorrections(hMainGui,I)
+Drift = getappdata(hMainGui.fig,'Drift');
+delete(findobj(hMainGui.MidPanel.aView,'Tag','pCorrections'));
+if size(I,3)==1
+    stidx = hMainGui.Values.FrameIdx(1);
+    if length(hMainGui.Values.FrameIdx)>2
+        idx = hMainGui.Values.FrameIdx(stidx+1);
+    else
+        idx = hMainGui.Values.FrameIdx(2);
     end
-    line(hMainGui.MidPanel.aView,[OffsetMap(n).Match(:,1) OffsetMap(n).Match(:,3)]',[OffsetMap(n).Match(:,2) OffsetMap(n).Match(:,4)]','Color','white','Tag','pOffset','Visible','on','LineStyle','-.','Marker','none');
-    line(hMainGui.MidPanel.aView,[OffsetMap(n).Match(:,1) OffsetMap(n).Match(:,3)]',[OffsetMap(n).Match(:,2) OffsetMap(n).Match(:,4)]','Color','black','Tag','pOffset','Visible','on','LineStyle',':','Marker','none');    
-    line(hMainGui.MidPanel.aView,OffsetMap(n).Match(:,1),OffsetMap(n).Match(:,2),'Color','red','Tag','pOffset','Visible','on','Marker','*','LineStyle','none');
-    line(hMainGui.MidPanel.aView,OffsetMap(n).Match(:,3),OffsetMap(n).Match(:,4),'Color','green','Tag','pOffset','Visible','on','Marker','*','LineStyle','none');
+else
+   idx = hMainGui.Values.FrameIdx(2:end);
+   stidx = 1:length(idx);
+end
+[y,x,~] = size(I); 
+X = repmat(5:5:x-5,ceil((y-10)/5),1);
+Y = repmat(5:5:y-5,1,ceil((x-10)/5));
+for n = 1:length(stidx)
+    if ~isempty(Drift{stidx(n)}) && all(idx>0)
+        fidx =  min([idx(n) size(Drift{stidx(n)},3)]);
+        T = Drift{stidx(n)}(:,:,fidx);
+        NX = X(:) * T(1,1) + Y(:) * T(2,1) + T(3,1);
+        NY = X(:) * T(1,2) + Y(:) * T(2,2) + T(3,2);
+        if numel(stidx)==1
+            c = 'b';
+        else
+            c = get(hMainGui.ToolBar.ToolColors(hMainGui.Values.StackColor(stidx(n))),'CData');
+            c = squeeze(c(1,1,1:3));
+        end
+        quiver(hMainGui.MidPanel.aView,X(:),Y(:),NX(:)-X(:),NY(:)-Y(:),0,'Tag','pCorrections','Color',c);
+    end
 end
 
 function hMainGui=SetZoom(hMainGui)

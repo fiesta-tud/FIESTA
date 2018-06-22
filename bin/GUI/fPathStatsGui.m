@@ -26,6 +26,8 @@ function Create
 global Molecule;
 global Filament;
 global Index;
+global Config;
+global FiestaDir;
 
 h=findobj('Tag','hPathsStatsGui');
 close(h)
@@ -36,18 +38,23 @@ if all(MolSelect==0) && all(FilSelect==0)
     fMsgDlg('No track selected!','error');
     return;
 end
-button =  fQuestDlg('How should FIESTA find the path?','Path Statistics',{'Fit','Filament','Average'},'Fit');
-if isempty(button)
+options = fPathStatsDlg;
+if isempty(options)
     return;
 end
-if strcmp(button,'Average')
-    AverageDis = round(str2double(fInputDlg('Average Distance in nm:','')));
+if strcmp(options.mode,'average')
+    AverageDis = options.dis;
+else
+    AverageDis  = 0;
 end
 
-if strcmp(button,'Filament')
+if strcmp(options.mode,'filament')
     if isempty(Filament)
         fMsgDlg('No filaments present!','error');
         return;
+    end
+    if options.align == 1
+        fMenuStatistics('AlignFilament');
     end
     if all(FilSelect==0)
         PathFilSelect = ones(size(Filament));
@@ -75,6 +82,7 @@ PathMol = rmfield(PathMol,'Type');
 PathFil = Filament(FilSelect==1);
 PathFil = rmfield(PathFil,{'PosStart','PosCenter','PosEnd','Data'});
 PathStats = [PathMol PathFil];
+
 Index = [ find(MolSelect==1) find(FilSelect==1)*1i ];
 
 hPathsStatsGui.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','MenuBar','none','Name','Path Statistics',...
@@ -110,31 +118,31 @@ hPathsStatsGui.bDisregard = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','
                             'Position',[0.75 0.025 0.225 0.3],'String','Disregard','Tag','bReset');                            
                         
 hPathsStatsGui.rLinear = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));',...
-                            'Position',[0.1 0.8 0.6 0.12],'String','Linear path','Style','radiobutton','BackgroundColor',c,'Tag','rLinear','Value',0);                         
+                            'Position',[0.1 0.84 0.6 0.15],'String','Linear path','Style','radiobutton','BackgroundColor',c,'Tag','rLinear','Value',0);                         
 
 hPathsStatsGui.rPoly2 = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));',...
-                            'Position',[0.1 0.66 0.6 0.12],'String','2nd deg polynomial path','Style','radiobutton','BackgroundColor',c,'Tag','rPoly2','Value',0);          
+                            'Position',[0.1 0.68 0.6 0.15],'String','2nd deg polynomial path','Style','radiobutton','BackgroundColor',c,'Tag','rPoly2','Value',0);          
 
 hPathsStatsGui.rPoly3 = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));',...
-                            'Position',[0.1 0.50 0.6 0.12],'String','3rd deg polynomial path','Style','radiobutton','BackgroundColor',c,'Tag','rPoly3','Value',0);                          
+                            'Position',[0.1 0.52 0.6 0.15],'String','3rd deg polynomial path','Style','radiobutton','BackgroundColor',c,'Tag','rPoly3','Value',0);                          
 
 hPathsStatsGui.rFilament = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));',...
-                                    'Position',[0.1 0.34 0.6 0.12],'String','Filament path','Style','radiobutton','BackgroundColor',c,'Tag','rFilament','Value',0);                          
+                                    'Position',[0.1 0.36 0.6 0.15],'String','Filament path','Style','radiobutton','BackgroundColor',c,'Tag','rFilament','Value',0);                          
 
 if isempty(Filament)
     set(hPathsStatsGui.rFilament,'Enable','off');
 end
 
 hPathsStatsGui.rAverage = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));',...
-                            'Position',[0.1 0.18 0.6 0.12],'String','Average path','Style','radiobutton','BackgroundColor',c,'Tag','rAverage','Value',0);   
+                            'Position',[0.1 0.2 0.6 0.15],'String','Average path','Style','radiobutton','BackgroundColor',c,'Tag','rAverage','Value',0);   
 
 hPathsStatsGui.tRegion = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Enable','off','HorizontalAlignment','left',...
-                              'Position',[0.15 0.02 0.15 0.12],'String','Region:','Style','text','Tag','tRegion','BackgroundColor',c);                         
+                              'Position',[0.15 0.02 0.15 0.14],'String','Region:','Style','text','Tag','tRegion','BackgroundColor',c);                         
 
 hPathsStatsGui.eAverage = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Callback','fPathStatsGui(''Update'',getappdata(0,''hPathsStatsGui''));','Enable','off',...
-                              'Position',[0.3 0.02 0.3 0.16],'String','1000','FontSize',8,'Style','edit','Tag','eAverage','BackgroundColor',[1 1 1]);                         
+                              'Position',[0.3 0.02 0.3 0.14],'String','1000','FontSize',8,'Style','edit','Tag','eAverage','BackgroundColor',[1 1 1]);                         
                           
-hPathsStatsGui.tNM = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Position',[0.62 0.02 0.1 0.12],'Enable','off',...
+hPathsStatsGui.tNM = uicontrol('Parent',hPathsStatsGui.pOptions,'Units','normalized','Position',[0.62 0.02 0.1 0.14],'Enable','off',...
                                'String','nm','Style','text','Tag','tNM','HorizontalAlignment','left','BackgroundColor',c);
 
 hPathsStatsGui.pPlotDistPanel = uipanel('Parent',hPathsStatsGui.fig,'Position',[0.025 0.28 0.95 0.335],'Tag','PlotPanel','BackgroundColor','white');
@@ -156,7 +164,7 @@ setappdata(hPathsStatsGui.fig,'PathStats',PathStats);
 setappdata(hPathsStatsGui.fig,'PathFilSelect',PathFilSelect);
 
 if ~isempty(PathStats)
-    if strcmp(button,'Filament')
+    if strcmp(options.mode,'filament')
         PosFil = InterpolFil(Filament(PathFilSelect));
     else
         PosFil = [];      
@@ -164,116 +172,146 @@ if ~isempty(PathStats)
     setappdata(hPathsStatsGui.fig,'PosFil',PosFil);       
     nPathStats = length(PathStats);
     hMainGui=getappdata(0,'hMainGui');
-    h=progressdlg('String','Calculating path','Min',0,'Max',nPathStats,'Parent',hMainGui.fig,'Cancel','on');
-    for n=1:nPathStats
-        PathStats(n).PathData = [];
-        if isempty(PathStats(n).PathData)
-            if size(PathStats(n).Results,1)>9&&~strcmp(button,'Filament')
-                if strcmp(button,'Fit')
-                    [param1,resnorm1] = PathFitLinear(PathStats(n).Results(:,3:5));
-                    [param2,resnorm2] = PathFitCurved(PathStats(n).Results(:,3:5),3); 
-                    [param3,resnorm3] = PathFitCurved(PathStats(n).Results(:,3:5),4);
-                    if all(resnorm1*1.1<[resnorm2 resnorm3])
-                        Path = EvalLinearPath(param1,PathStats(n).Results(:,3:5));
-                        if n == 1
-                            set(hPathsStatsGui.rLinear,'Value',1);  
+    dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
+    parallelprogressdlg('String','Calculating path','Max',nPathStats,'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
+    [PathStats(:).AverageDis] = deal(0);
+    fil = Filament(PathFilSelect);
+    parfor (n=1:nPathStats,Config.NumCores)
+        Path = [];
+        if isempty(PathStats(n).PathData) || options.overwrite == 1
+            if size(PathStats(n).Results,1)> 9 && ~strcmp(options.mode,'filament')
+                if strcmp(options.mode,'fit')
+                    if strcmp(options.fit,'auto')
+                        [param1,resnorm1] = PathFitLinear(PathStats(n).Results(:,3:5));
+                        [param2,resnorm2] = PathFitCurved(PathStats(n).Results(:,3:5),3); 
+                        [param3,resnorm3] = PathFitCurved(PathStats(n).Results(:,3:5),4);
+                        if all(resnorm1*1.1<[resnorm2 resnorm3])
+                            Path = EvalLinearPath(param1,PathStats(n).Results(:,3:5));
+                            PathStats(n).AverageDis = -1;
+                        elseif resnorm2*1.1<resnorm3
+                            Path = EvalCurvedPath(param2,PathStats(n).Results(:,3:5));
+                            PathStats(n).AverageDis = -2;
+                        else
+                            Path = EvalCurvedPath(param3,PathStats(n).Results(:,3:5));
+                            PathStats(n).AverageDis = -3;
                         end
+                    elseif strcmp(options.fit,'poly1')
+                        [param1,~] = PathFitLinear(PathStats(n).Results(:,3:5));
+                        Path = EvalLinearPath(param1,PathStats(n).Results(:,3:5));
                         PathStats(n).AverageDis = -1;
-                    elseif resnorm2*1.1<resnorm3
+                    elseif strcmp(options.fit,'poly2')
+                        [param2,~] = PathFitCurved(PathStats(n).Results(:,3:5),3); 
                         Path = EvalCurvedPath(param2,PathStats(n).Results(:,3:5));
                         PathStats(n).AverageDis = -2;
-                        if n == 1
-                            set(hPathsStatsGui.rPoly2,'Value',1);   
-                        end
                     else
+                        [param3,~] = PathFitCurved(PathStats(n).Results(:,3:5),4);
                         Path = EvalCurvedPath(param3,PathStats(n).Results(:,3:5));
                         PathStats(n).AverageDis = -3;
-                        if n == 1
-                            set(hPathsStatsGui.rPoly3,'Value',1); 
-                        end
                     end
-                elseif strcmp(button,'Average')
+                elseif strcmp(options.mode,'average')
                     Path = AveragePath(PathStats(n).Results(:,1:5),AverageDis);
-                    PathStats(n).AverageDis = AverageDis;
-                    if n == 1
-                        set(hPathsStatsGui.rAverage,'Value',1); 
-                        set(hPathsStatsGui.eAverage,'Enable','on','String',num2str(PathStats(1).AverageDis)); 
-                        set(hPathsStatsGui.tNM,'Enable','on');
-                    end
+                    PathStats(n).AverageDis = AverageDis; 
                 end
-            elseif strcmp(button,'Filament')    
+            elseif strcmp(options.mode,'filament')    
                 nFil = size(PosFil,1);
                 if nFil > 1
                     s = ones(nFil,1)*Inf;
                     for m = 1:nFil
-                        s(m) = GetFilament(PathStats(n).Results(:,1:5),Filament(PathFilSelect(m)));
+                        s(m) = GetFilament(double(PathStats(n).Results(:,1:5)),fil(m));
                     end
                     [~,k] = min(s);
                 else
                     k = 1;
                 end
-                Path = EvalFilamentPath(PathStats(n).Results,PosFil(k,:),Filament(PathFilSelect(k)));
-                PathStats(n).AverageDis = -4;
-                if n == 1
-                    set(hPathsStatsGui.rFilament,'Value',1); 
+                Path = EvalFilamentPath(PathStats(n).Results,PosFil(k,:),fil(k));
+                if options.refboth == 0 
+                    Path = real(Path);
                 end
+                PathStats(n).AverageDis = -4;
             else
                 if size(PathStats(n).Results,1)>2
                     [param1,~] = PathFitLinear(PathStats(n).Results(:,3:5));
                     Path = EvalLinearPath(param1,PathStats(n).Results(:,3:5));
                     PathStats(n).AverageDis = -1;
-                    if n == 1
-                        set(hPathsStatsGui.rLinear,'Value',1);  
-                    end
                 else
                     Path = PathStats(n).Results(:,3:6);
                     Path(:,5:6) = NaN;
+                    PathStats(n).AverageDis=-1;
                 end
             end
             PathStats(n).PathData=Path;
         else
-            PathStats(n).AverageDis(n)=-5;
+            PathStats(n).AverageDis=-5;
         end
-        if isempty(h)
-            return
-        end
-        h=progressdlg(n);
+        fSave(dirStatus,n);
     end
+    parallelprogressdlg('close');
+    if PathStats(1).AverageDis == -1
+        set(hPathsStatsGui.rLinear,'Value',1);   
+    elseif PathStats(1).AverageDis == -2
+        set(hPathsStatsGui.rPoly2,'Value',1);   
+    elseif PathStats(1).AverageDis == -3
+        set(hPathsStatsGui.rPoly3,'Value',1); 
+    elseif PathStats(1).AverageDis == -4
+        set(hPathsStatsGui.rFilament,'Value',1); 
+    elseif PathStats(1).AverageDis > 0
+        set(hPathsStatsGui.rAverage,'Value',1); 
+        set(hPathsStatsGui.eAverage,'Enable','on','String',num2str(PathStats(1).AverageDis)); 
+        set(hPathsStatsGui.tNM,'Enable','on');
+    end   
     setappdata(hPathsStatsGui.fig,'PathStats',PathStats);
     Draw(hPathsStatsGui);    
 end
 fPlaceFig(hPathsStatsGui.fig,'big');
   
 function path = InterpolFil(Filament)
+global Config;
+global FiestaDir;
 nFil = length(Filament);
 hMainGui=getappdata(0,'hMainGui');
-progressdlg('String','Interpolating Filaments','Min',0,'Max',nFil,'Parent',hMainGui.fig,'Cancel','on');
+nData = zeros(1,nFil);
 for n = 1:nFil
-    for m = 1:length(Filament(n).Data)
-        X = Filament(n).Data{m}(:,1);
-        Y = Filament(n).Data{m}(:,2);
-        Z = Filament(n).Data{m}(:,3);
-        P = 1:length(X);
-        pi = -5:0.001:length(X)+5;
-        path{n,m}(:,1) = interp1(P,X,pi,'linear','extrap'); %#ok<AGROW>
-        path{n,m}(:,2) = interp1(P,Y,pi,'linear','extrap'); %#ok<AGROW>
-        if ~any(isnan(Z))
-            path{n,m}(:,3) = interp1(P,Z,pi,'linear','extrap'); %#ok<AGROW>
-        end
-    end
-    h=progressdlg(n);
-    if isempty(h)
-        return
-    end 
+    nData(n) = length(Filament(n).Data);
 end
+dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
+parallelprogressdlg('String','Interpolating Filaments','Max',nFil,'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
+path = cell(nFil,max(nData));
+for n = 1:nFil
+    filData = Filament(n).Data;
+    parfor (m = 1:nData(n),Config.NumCores)
+        X = double(filData{m}(:,1));
+        Y = double(filData{m}(:,2));
+        Z = double(filData{m}(:,3));
+        if numel(X)>1
+            P = 1:length(X);
+            pi = -5:0.001:length(X)+5;
+            pX = interp1(P,X,pi,'linear','extrap');
+            pY = interp1(P,Y,pi,'linear','extrap');
+            pZ = [];
+            if ~any(isnan(Z))
+                pZ = interp1(P,Z,pi,'linear','extrap');
+            end
+        else
+            pX = X;
+            pY = Y;
+            pZ = [];
+            if ~isnan(Z)
+                pZ = Z;
+            end
+        end
+        path{n,m} = [pX' pY' pZ'];
+    end
+    fSave(dirStatus,n);
+end
+parallelprogressdlg('close');
 
 function res = GetFilament(Results,Filament)
 if length(Filament.Data) == 1
     if any(isnan(Results(:,5)))
-        XY = Filament.Data{1}(:,1:2);
+        XY = double(Filament.Data{1}(:,1:2));
         res = min(pdist2(XY,Results(:,3:4)));
     else
-        XYZ = Filament.Data{1}(:,1:3);
+        XYZ = double(Filament.Data{1}(:,1:3));
         res = min(pdist2(XYZ,Results(:,3:5)));
     end
 else
@@ -534,7 +572,7 @@ else
                  if nFil > 1
                      s = ones(nFil,1)*Inf;
                      for m = 1:nFil
-                         s(m) = GetFilament(PathStats(i).Results(:,1:5),Filament(PathFilSelect(m)));
+                         s(m) = GetFilament(double(PathStats(i).Results(:,1:5)),Filament(PathFilSelect(m)));
                      end
                      [~,k] = min(s);
                  else
