@@ -485,7 +485,8 @@ if FileName ~= 0
                  {['D(weighted) = ' val2str(mean(WeightedD_2D),2*std(WeightedD_2D)) char(181) 'm' char(178) '/s'],...
                   ['D(global) = ' val2str(mean(GlobalD_2D),2*std(GlobalD_2D)) char(181) 'm' char(178) '/s'],...
                   ['D(fitted) = ' val2str(mean(FittedD_2D),2*std(FittedD_2D)) char(181) 'm' char(178) '/s'],...
-                  ['N = ' num2str(nObj)]});axes(fig,'Units','centimeters','Position',get(aPlot2D,'Position'),'Box','on','xtick',[],'ytick',[]);
+                  ['N = ' num2str(nObj)]});
+    axes(fig,'Units','centimeters','Position',get(aPlot2D,'Position'),'Box','on','xtick',[],'ytick',[]);
     axes(aPlot2D); 
     save([PathName file '.mat'],'GlobalD_2D','WeightedD_2D','FittedD_2D');
     if any(FittedD_1D>0)

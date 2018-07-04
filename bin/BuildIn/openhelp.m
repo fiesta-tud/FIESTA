@@ -4,7 +4,7 @@ function openhelp( site, anchor )
 %   site    the wiki site in the documentation (optional)
 %   anchor  the anchor name on the site (optional)
   
-website = 'https://www.bcube-dresden.de/fiesta/wiki/';
+website = 'https://fusionforge.zih.tu-dresden.de/plugins/mediawiki/wiki/fiesta/index.php/';
 if nargin == 0
     web([website 'FIESTA'], '-notoolbar')
 elseif nargin == 1

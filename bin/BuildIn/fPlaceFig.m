@@ -16,7 +16,7 @@ switch(mode)
     case 'speed'
         NewPos = [Pos(1)+0.4*Pos(3) Pos(2)+0.3*Pos(4) Pos(3)*0.2 Pos(4)*0.3];
     case 'export'
-        NewPos = [Pos(1)+0.65*Pos(3) Pos(2)+0.15*Pos(4) Pos(3)*0.35 Pos(4)*0.7];
+        NewPos = [Pos(1)+0.65*Pos(3) Pos(2)+0.25*Pos(4) Pos(3)*0.3 Pos(4)*0.5];
     case 'special'
         NewPos = [Pos(1)+0.35*Pos(3) Pos(2)+0.25*Pos(4) Pos(3)*0.30 Pos(4)*0.5];
     case 'reposition'

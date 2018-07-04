@@ -92,6 +92,7 @@ else
 end
 hDataGui.idx=idx;
 h=findobj('Tag','hDataGui');
+%delete(h); % for testing
 if numel(h)>1
     delete(h);
     h = [];
@@ -112,9 +113,11 @@ if isempty(h)
 
     hDataGui.pPlotPanel = uipanel('Parent',hDataGui.fig,'Position',[0.35 0.55 0.63 0.4],'Tag','PlotPanel','BackgroundColor','white');
     
-    hDataGui.aPlot = axes('Parent',hDataGui.pPlotPanel,'OuterPosition',[0 0 1 1],'Tag','Plot','NextPlot','add','TickDir','out','Layer','top',...
+    hDataGui.aBoxPlot = axes('Parent',hDataGui.pPlotPanel,'OuterPosition',[0 0.02 1 0.98],'Tag','BoxPlot','Box','on','xtick',[],'ytick',[]);
+    hDataGui.aPlot = axes('Parent',hDataGui.pPlotPanel,'OuterPosition',[0 0.02 1 0.98],'Tag','Plot','NextPlot','add','TickDir','out','Layer','top',...
                           'XLimMode','manual','YLimMode','manual');
-                      
+   
+        
     columnname = {'','','','','','','','','','',''};
     if mean(Object.Results(2:end,2)-Object.Results(1:end-1,2))<0.1
         columnformat = {'logical','numeric','bank','bank','bank','bank','bank','bank', 'bank', 'bank', 'char'};
@@ -271,7 +274,6 @@ if isempty(h)
     set(hDataGui.fig, 'CloseRequestFcn',@Close);
     set(hDataGui.fig, 'WindowScrollWheelFcn',@Scroll);  
     set(hDataGui.tTable, 'CellEditCallback',@Select);
-    set(hDataGui.tTable, 'CellSelectionCallback',@ReturnFocus);
 else
     setappdata(hDataGui.fig,'Object',Object);
     set(hDataGui.fig,'Name',Object.Name,'WindowStyle','normal','Visible','on');
@@ -502,17 +504,8 @@ XPlot=XList.data{x};
 
 y=get(hDataGui.lYaxis,'Value');
 YList=get(hDataGui.lYaxis,'UserData');
-if ~isempty(XPlot)
-    YPlot{1}=YList(x).data{y};
-else
-    XPlot=YList(x).data{y}(:,1);
-    YPlot{1}=YList(x).data{y}(:,2);
-    XList.list{x}=YList(x).list{y};
-    XList.units{x}=YList(x).units{y};
-    YList(x).list{y}='number of data points';    
-    YList(x).units{y}='';
-end 
-                  
+YPlot{1}=YList(x).data{y};
+      
 cla(hDataGui.aPlot,'reset');
 %hDataGui.aPlot = axes('Parent',hDataGui.pPlotPanel,'OuterPosition',[0 0 1 1],'TickDir','out',...
    %                   'XLimMode','manual','YLimMode','manual'); 
@@ -522,21 +515,6 @@ setappdata(0,'hDataGui',hDataGui);
 hold on     
 xscale=1;
 yscale=1;
-if strcmp(XList.units{x},'[nm]')
-    if x==1 
-        if (max(XPlot)-min(XPlot))>5000
-            xscale=1000;
-            XList.units{x}=['[' char(956) 'm]'];
-            yscale=1000;
-            YList(x).units{y}=['[' char(956) 'm]'];
-        end
-    else
-        if max(XPlot)>5000
-            xscale=1000;
-            XList.units{x}=['[' char(956) 'm]'];    
-        end
-    end
-end
 if strcmp(YList(x).units{y},'[nm]') 
     if x==1 
         if (max(YPlot{1})-max(YPlot{1}))>5000
@@ -546,7 +524,7 @@ if strcmp(YList(x).units{y},'[nm]')
             XList.units{x}=['[' char(956) 'm]']; 
         end
     else
-        if max(YPlot{1})>5000
+        if max(YPlot{1})>5000 || min(YPlot{1})>1000
             yscale=1000;
             YList(x).units{y}=['[' char(956) 'm]'];   
         end
@@ -556,8 +534,23 @@ if strcmp(YList(x).units{y},'[nm/s]') && max(YPlot{1})>5000
     yscale=1000;
     YList(x).units{y}=['[' char(956) 'm/s]'];
 end
-if x<length(XList.data)
+if ~isempty(XPlot)
     FilXY = [];
+    if strcmp(XList.units{x},'[nm]')
+        if x==1 
+            if (max(XPlot)-min(XPlot))>5000
+                xscale=1000;
+                XList.units{x}=['[' char(956) 'm]'];
+                yscale=1000;
+                YList(x).units{y}=['[' char(956) 'm]'];
+            end
+        else
+            if max(XPlot)>5000 || min(XPlot)>1000
+                xscale=1000;
+                XList.units{x}=['[' char(956) 'm]'];    
+            end
+        end
+    end
     if x==1
         Dis=norm([Object.Results(1,3)-Object.Results(end,3) Object.Results(1,4)-Object.Results(end,4)]);     
         if strcmp(hDataGui.Type,'Filament')
@@ -680,9 +673,15 @@ if x<length(XList.data)
         set(hDataGui.DataPlot(n),'Marker','.','MarkerSize',12);
     end
 else
-    hDataGui.DataPlot=bar(hDataGui.aPlot,XPlot/xscale,YPlot{1}/yscale(1),'BarWidth',1,'EdgeColor','black','FaceColor','blue','LineWidth',1);
-    SetAxis(hDataGui.aPlot,XPlot/xscale,YPlot{1}/yscale(1),NaN,[]); 
-    SetLabels(hDataGui,XList,YList,[],x,y,[]);
+    hDataGui.DataPlot = histogram(hDataGui.aPlot,YPlot{1}/yscale,'BinMethod','sturges');
+    xticks(hDataGui.aPlot,hDataGui.DataPlot.BinEdges);
+    xticklabels(hDataGui.aPlot,num2str(hDataGui.DataPlot.BinEdges',4));
+    xlim(hDataGui.aPlot,[min(hDataGui.DataPlot.BinEdges) max(hDataGui.DataPlot.BinEdges)]);
+    ylim(hDataGui.aPlot,[0 1.05*max(hDataGui.DataPlot.Values)]);
+    yticks(hDataGui.aPlot,0:max([1 round(max(hDataGui.DataPlot.Values)/5)]):1.05*max(hDataGui.DataPlot.Values));
+    xlabel(hDataGui.aPlot,[YList(x).list{y} '  ' YList(x).units{y}]);
+    ylabel(hDataGui.aPlot,'number of data points');
+    set(hDataGui.aPlot,'TickDir','out');
 end
 hold off;
 if xy{1}(2)~=1&&xy{2}(2)~=1 && ax==-1
@@ -692,6 +691,7 @@ else
     hDataGui.Zoom.currentXY = hDataGui.Zoom.globalXY;
     hDataGui.Zoom.level = 0;
 end
+set(hDataGui.aBoxPlot,'Position',get(hDataGui.aPlot,'Position'));
 setappdata(0,'hDataGui',hDataGui);
 ReturnFocus([],[]);
 
@@ -756,7 +756,7 @@ end
 
 function KeyPress(~,evnt)
 hDataGui=getappdata(0,'hDataGui');
-if strcmp(hDataGui.CursorMode,'Normal');
+if strcmp(hDataGui.CursorMode,'Normal')
     switch(evnt.Key)
         case 'shift' 
             hDataGui.CursorMode='Zoom';
@@ -779,7 +779,7 @@ hDataGui=getappdata(0,'hDataGui');
 set(0,'CurrentFigure',hDataGui.fig);
 cp=get(hDataGui.aPlot,'currentpoint');
 cp=cp(1,[1 2]);
-if strcmp(hDataGui.CursorMode,'Zoom');
+if strcmp(hDataGui.CursorMode,'Zoom')
     if strcmp(evnt.Key,'shift')
         if all(hDataGui.CursorDownPos~=0) && all(hDataGui.CursorDownPos~=cp) 
             xy{1} =  [min(hDataGui.ZoomRegion.X) max(hDataGui.ZoomRegion.X)];
@@ -822,18 +822,11 @@ if all(cpFig>=[pos(1) pos(2)]) && all(cpFig<=[pos(1)+pos(3) pos(2)+pos(4)])
             hDataGui.CursorDownPos=cp;                   
         end
     elseif strcmp(get(hDataGui.fig,'SelectionType'),'extend')
-        if strcmp(hDataGui.CursorMode,'Normal');
+        if strcmp(hDataGui.CursorMode,'Normal')
             hDataGui.CursorMode='Pan';
             hDataGui.CursorDownPos=cp;  
             CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,1,1,NaN,1,1,NaN,1,1,NaN,NaN,NaN,NaN;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,1,2,1,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,NaN,1,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;];
             set(hDataGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[10 9]);
-        elseif strcmp(hDataGui.CursorMode,'Zoom');
-            if all(hDataGui.CursorDownPos==0)
-                hDataGui.ZoomRegion.X=cp(1);
-                hDataGui.ZoomRegion.Y=cp(2);
-                hDataGui.ZoomRegion.plot=line(hDataGui.aPlot,cp(1),cp(2),'Color','black','LineStyle','--','Tag','pZoomRegion');                   
-                hDataGui.CursorDownPos=cp;                   
-            end
         end
     end
 end
@@ -846,92 +839,68 @@ Check=getappdata(hDataGui.fig,'Check');
 xy=get(hDataGui.aPlot,{'xlim','ylim'});
 cp=get(hDataGui.aPlot,'currentpoint');
 cp=cp(1,[1 2]);
-X=get(hDataGui.DataPlot(1),'XData');
-Y=get(hDataGui.DataPlot,'YData');
 if strcmp(hDataGui.CursorMode,'Normal')    
-    k = [];
-    d = [];
-    if all(hDataGui.CursorDownPos==cp)
-        if iscell(Y)
-            yyaxis(hDataGui.aPlot,'left');
-            dx=((xy{1}(2)-xy{1}(1))/25);
-            dy=((xy{2}(2)-xy{2}(1))/25);
-            d = [d;(X-cp(1)).^2+(Y{1}-cp(2)).^2];
-            k = [k find(abs(X-cp(1))<dx & abs(Y{1}-cp(2))<dy)];
-            
-            yyaxis(hDataGui.aPlot,'right');
-            dx=((xy{1}(2)-xy{1}(1))/25);
-            dy=((xy{2}(2)-xy{2}(1))/25);
-            d = [d;(X-cp(1)).^2+(Y{2}-cp(2)).^2];
-            k = [k find(abs(X-cp(1))<dx & abs(Y{2}-cp(2))<dy)];
-            [~,t]=min(min(d));
-            if ~isempty(k) && any(k==t)
-                Check(t) = ~Check(t);
+    if isgraphics(hDataGui.DataPlot(1),'line')
+        X=get(hDataGui.DataPlot(1),'XData');
+        Y=get(hDataGui.DataPlot,'YData');
+        k = [];
+        d = [];
+        if all(hDataGui.CursorDownPos==cp)
+            if iscell(Y)
+                yyaxis(hDataGui.aPlot,'left');
+                dx=((xy{1}(2)-xy{1}(1))/25);
+                dy=((xy{2}(2)-xy{2}(1))/25);
+                d = [d;(X-cp(1)).^2+(Y{1}-cp(2)).^2];
+                k = [k find(abs(X-cp(1))<dx & abs(Y{1}-cp(2))<dy)];
+
+                yyaxis(hDataGui.aPlot,'right');
+                dx=((xy{1}(2)-xy{1}(1))/25);
+                dy=((xy{2}(2)-xy{2}(1))/25);
+                d = [d;(X-cp(1)).^2+(Y{2}-cp(2)).^2];
+                k = [k find(abs(X-cp(1))<dx & abs(Y{2}-cp(2))<dy)];
+                [~,t]=min(min(d));
+                if ~isempty(k) && any(k==t)
+                    Check(t) = ~Check(t);
+                else
+                    k = [];
+                end
             else
-                k = [];
+                dx=((xy{1}(2)-xy{1}(1))/40);
+                dy=((xy{2}(2)-xy{2}(1))/40);
+                k=find( abs(X-cp(1))<dx & abs(Y-cp(2))<dy);
+                [~,t]=min((X(k)-cp(1)).^2+(Y(k)-cp(2)).^2);
+                Check(k(t)) = ~Check(k(t));
             end
-        else
-            dx=((xy{1}(2)-xy{1}(1))/40);
-            dy=((xy{2}(2)-xy{2}(1))/40);
-            k=find( abs(X-cp(1))<dx & abs(Y-cp(2))<dy);
-            [~,t]=min((X(k)-cp(1)).^2+(Y(k)-cp(2)).^2);
-            Check(k(t)) = ~Check(k(t));
-        end
-    elseif all(hDataGui.CursorDownPos~=0)
-        hDataGui.SelectRegion.X=[hDataGui.SelectRegion.X hDataGui.SelectRegion.X(1)];
-        hDataGui.SelectRegion.Y=[hDataGui.SelectRegion.Y hDataGui.SelectRegion.Y(1)];
-        if iscell(Y)
-            for n = 1:length(Y)
-                IN = inpolygon(X,Y{n},hDataGui.SelectRegion.X,hDataGui.SelectRegion.Y);
+        elseif all(hDataGui.CursorDownPos~=0)
+            hDataGui.SelectRegion.X=[hDataGui.SelectRegion.X hDataGui.SelectRegion.X(1)];
+            hDataGui.SelectRegion.Y=[hDataGui.SelectRegion.Y hDataGui.SelectRegion.Y(1)];
+            if iscell(Y)
+                for n = 1:length(Y)
+                    IN = inpolygon(X,Y{n},hDataGui.SelectRegion.X,hDataGui.SelectRegion.Y);
+                    Check(IN) = ~Check(IN);
+                    k=[k find(IN==1)];
+                end
+            else
+                IN = inpolygon(X,Y,hDataGui.SelectRegion.X,hDataGui.SelectRegion.Y);
                 Check(IN) = ~Check(IN);
-                k=[k find(IN==1)];
+                k=find(IN==1);
             end
-        else
-            IN = inpolygon(X,Y,hDataGui.SelectRegion.X,hDataGui.SelectRegion.Y);
-            Check(IN) = ~Check(IN);
-            k=find(IN==1);
         end
-    end
-    hDataGui.CursorDownPos(:)=0;        
-    if ~isempty(hDataGui.SelectRegion.plot)
-        delete(hDataGui.SelectRegion.plot);    
-        hDataGui.SelectRegion.plot=[];
-    end
-    if ~isempty(k)
-        data = get(hDataGui.tTable,'Data');
-        data(:,1) = num2cell(Check);
-        set(hDataGui.tTable,'Data',data);
+        hDataGui.CursorDownPos(:)=0;        
+        if ~isempty(hDataGui.SelectRegion.plot)
+            delete(hDataGui.SelectRegion.plot);    
+            hDataGui.SelectRegion.plot=[];
+        end
+        if ~isempty(k)
+            data = get(hDataGui.tTable,'Data');
+            data(:,1) = num2cell(Check);
+            set(hDataGui.tTable,'Data',data);
+        end
     end
 elseif strcmp(hDataGui.CursorMode,'Pan')    
     hDataGui.CursorDownPos(:)=0;    
     hDataGui.CursorMode='Normal';
     set(hDataGui.fig,'pointer','arrow');
-elseif strcmp(hDataGui.CursorMode,'Zoom')  
-    if all(hDataGui.CursorDownPos~=0) && all(hDataGui.CursorDownPos~=cp) 
-        xy{1} =  [min(hDataGui.ZoomRegion.X) max(hDataGui.ZoomRegion.X)];
-        xy{2} =  [min(hDataGui.ZoomRegion.Y) max(hDataGui.ZoomRegion.Y)];
-        set(hDataGui.aPlot,{'xlim','ylim'},xy);
-        hDataGui.Zoom.currentXY = xy;
-        x_total=hDataGui.Zoom.globalXY{1}(2)-hDataGui.Zoom.globalXY{1}(1);
-        y_total=hDataGui.Zoom.globalXY{2}(2)-hDataGui.Zoom.globalXY{2}(1);    
-        x_current=hDataGui.Zoom.currentXY{1}(2)-hDataGui.Zoom.currentXY{1}(1);
-        y_current=hDataGui.Zoom.currentXY{2}(2)-hDataGui.Zoom.currentXY{2}(1);   
-        hDataGui.Zoom.level = -log((x_current/x_total +  y_current/y_total)/2)*8;
-    else
-        if strcmp(get(hDataGui.fig,'SelectionType'),'extend') || strcmp(get(hDataGui.fig,'SelectionType'),'open')
-            hDataGui.Zoom.level = hDataGui.Zoom.level + 1;
-        else
-            hDataGui.Zoom.level = hDataGui.Zoom.level - 1 ;
-        end
-        setappdata(0,'hDataGui',hDataGui);
-        Scroll([],[]);
-        hDataGui = getappdata(0,'hDataGui');
-    end
-    if ~isempty(hDataGui.ZoomRegion.plot)
-        delete(hDataGui.ZoomRegion.plot);    
-        hDataGui.ZoomRegion.plot=[];
-    end
-    hDataGui.CursorDownPos(:)=0;    
 end
 setappdata(hDataGui.fig,'Check',Check);
 setappdata(0,'hDataGui',hDataGui);
@@ -948,25 +917,27 @@ cpFig = cpFig(1,[1 2]);
 xy=get(hDataGui.aPlot,{'xlim','ylim'});
 cp=get(hDataGui.aPlot,'currentpoint');
 cp=cp(1,[1 2]);
-X=get(hDataGui.DataPlot(1),'XData');
-Y=get(hDataGui.DataPlot(1),'YData');
 if all(cpFig>=[pos(1) pos(2)]) && all(cpFig<=[pos(1)+pos(3) pos(2)+pos(4)])
     if strcmp(hDataGui.CursorMode,'Normal')
-        dx=((xy{1}(2)-xy{1}(1))/40);
-        dy=((xy{2}(2)-xy{2}(1))/40);
-        k=find( abs(X-cp(1))<dx & abs(Y-cp(2))<dy);
-        [~,t]=min((X(k)-cp(1)).^2+(Y(k)-cp(2)).^2);
-        set(hDataGui.tFrameValue,'String',num2str(Object.Results(k(t),1)));
-        if all(hDataGui.CursorDownPos~=0)
-            hDataGui.SelectRegion.X=[hDataGui.SelectRegion.X cp(1)];
-            hDataGui.SelectRegion.Y=[hDataGui.SelectRegion.Y cp(2)];
-            if ~isempty(hDataGui.SelectRegion.plot)
-                delete(hDataGui.SelectRegion.plot);    
-                hDataGui.SelectRegion.plot=[];
+        if isgraphics(hDataGui.DataPlot(1),'line')
+            X=get(hDataGui.DataPlot(1),'XData');
+            Y=get(hDataGui.DataPlot(1),'YData');
+            dx=((xy{1}(2)-xy{1}(1))/40);
+            dy=((xy{2}(2)-xy{2}(1))/40);
+            k=find( abs(X-cp(1))<dx & abs(Y-cp(2))<dy);
+            [~,t]=min((X(k)-cp(1)).^2+(Y(k)-cp(2)).^2);
+            set(hDataGui.tFrameValue,'String',num2str(Object.Results(k(t),1)));
+            if all(hDataGui.CursorDownPos~=0)
+                hDataGui.SelectRegion.X=[hDataGui.SelectRegion.X cp(1)];
+                hDataGui.SelectRegion.Y=[hDataGui.SelectRegion.Y cp(2)];
+                if ~isempty(hDataGui.SelectRegion.plot)
+                    delete(hDataGui.SelectRegion.plot);    
+                    hDataGui.SelectRegion.plot=[];
+                end
+                hDataGui.SelectRegion.plot = line(hDataGui.aPlot,[hDataGui.SelectRegion.X hDataGui.SelectRegion.X(1)] ,[hDataGui.SelectRegion.Y hDataGui.SelectRegion.Y(1)],'Color','black','LineStyle',':','Tag','pSelectRegion');
             end
-            hDataGui.SelectRegion.plot = line(hDataGui.aPlot,[hDataGui.SelectRegion.X hDataGui.SelectRegion.X(1)] ,[hDataGui.SelectRegion.Y hDataGui.SelectRegion.Y(1)],'Color','black','LineStyle',':','Tag','pSelectRegion');
+            set(hDataGui.fig,'pointer','arrow');
         end
-        set(hDataGui.fig,'pointer','arrow');
     elseif strcmp(hDataGui.CursorMode,'Pan')
         if all(hDataGui.CursorDownPos~=0)
             Zoom=hDataGui.Zoom;
@@ -990,18 +961,6 @@ if all(cpFig>=[pos(1) pos(2)]) && all(cpFig<=[pos(1)+pos(3) pos(2)+pos(4)])
         end
         CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,1,1,NaN,1,1,NaN,1,1,NaN,NaN,NaN,NaN;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,1,2,1,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,NaN,1,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;];
         set(hDataGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[10 9]);    
-    elseif strcmp(hDataGui.CursorMode,'Zoom')
-        if all(hDataGui.CursorDownPos~=0)
-            hDataGui.ZoomRegion.X=[hDataGui.ZoomRegion.X(1) hDataGui.ZoomRegion.X(1) cp(1) cp(1) hDataGui.ZoomRegion.X(1)];
-            hDataGui.ZoomRegion.Y=[hDataGui.ZoomRegion.Y(1) cp(2) cp(2) hDataGui.ZoomRegion.Y(1) hDataGui.ZoomRegion.Y(1)];
-            if ~isempty(hDataGui.ZoomRegion.plot)
-                delete(hDataGui.ZoomRegion.plot);    
-                hDataGui.ZoomRegion.plot=[];
-            end
-            hDataGui.ZoomRegion.plot = line(hDataGui.aPlot,hDataGui.ZoomRegion.X ,hDataGui.ZoomRegion.Y,'Color','black','LineStyle','--','Tag','pZoomRegion');
-        end
-        CData = [NaN,NaN,NaN,NaN,1,1,1,1,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,1,1,NaN,2,NaN,2,1,1,NaN,NaN,NaN,NaN,NaN,NaN;NaN,1,2,NaN,2,1,1,NaN,2,NaN,1,NaN,NaN,NaN,NaN,NaN;NaN,1,NaN,2,NaN,1,1,2,NaN,2,1,NaN,NaN,NaN,NaN,NaN;1,NaN,2,NaN,2,1,1,NaN,2,NaN,2,1,NaN,NaN,NaN,NaN;1,2,1,1,1,1,1,1,1,1,NaN,1,NaN,NaN,NaN,NaN;1,NaN,1,1,1,1,1,1,1,1,2,1,NaN,NaN,NaN,NaN;1,2,NaN,2,NaN,1,1,2,NaN,2,NaN,1,NaN,NaN,NaN,NaN;NaN,1,2,NaN,2,1,1,NaN,2,NaN,1,NaN,NaN,NaN,NaN,NaN;NaN,1,NaN,2,NaN,1,1,2,NaN,2,1,2,NaN,NaN,NaN,NaN;NaN,NaN,1,1,2,NaN,2,NaN,1,1,1,1,2,NaN,NaN,NaN;NaN,NaN,NaN,NaN,1,1,1,1,NaN,2,1,1,1,2,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,1,1,1,2,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,1,1,1,2;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,1,1,1;NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,1,2;];
-        set(hDataGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[6 6]);
     end
     setappdata(0,'hDataGui',hDataGui);
 else 
@@ -1408,23 +1367,18 @@ else
     lYaxis(n).units{k+1}='[nm]';
     lYaxis(n).data{k+1}=[];
 end
-lYaxis(n).list{k+2}='z-position';
-lYaxis(n).units{k+2}='[nanometer]';
-lYaxis(n).data{k+2}=[];
+if ~all(isnan(Object.Results(:,5)))
+    lYaxis(n).list{k+2}='z-position';
+    lYaxis(n).units{k+2}='[nanometer]';
+    lYaxis(n).data{k+2}=[];
+end
 
 function CreateHistograms(hDataGui)
 Object=getappdata(hDataGui.fig,'Object');
 lYaxis=get(hDataGui.lYaxis,'UserData');
 vel=CalcVelocity(Object);
 n=length(lYaxis);
-barchoice=[1 2 4 5 10 20 25 50 100 200 250 500 1000 2000 5000 10000 50000 10^5 10^6 10^7 10^8];
-
-total=(max(vel)-min(vel))/15;
-[~,t]=min(abs(total-barchoice));
-barwidth=barchoice(t(1));
-x=fix(min(vel)/barwidth)*barwidth-barwidth:barwidth:ceil(max(vel)/barwidth)*barwidth+barwidth;
-num = hist(vel,x);
-lYaxis(n).data{1}=[x' num']; 
+lYaxis(n).data{1} = vel;
 
 XPos=Object.Results(:,3);
 YPos=Object.Results(:,4);
@@ -1438,9 +1392,8 @@ for i=1:length(XPos)
 end
 p=tril(pairwise,-1);
 pairwise=p(p>1);
-x=round(min(pairwise)-10):1:round(max(pairwise)+10);
-num = hist(pairwise,x);
-lYaxis(n).data{2}=[x' num']; 
+lYaxis(n).data{2} = pairwise; 
+
 k=3;
 if isfield(Object,'PathData')
     if ~isempty(Object.PathData)
@@ -1451,50 +1404,25 @@ if isfield(Object,'PathData')
         end
         p=tril(pairwise,-1);
         pairwise=p(p>1);
-        x=round(min(pairwise)-10):1:round(max(pairwise)+10);
-        num = hist(pairwise,x);
-        lYaxis(n).data{k}=[x' num']; 
+        lYaxis(n).data{k} = pairwise;
         k=k+1;
     end
 end
 
 Amp=Object.Results(:,8);
-total=(max(Amp)-min(Amp))/15;
-[~,t]=min(abs(total-barchoice));
-barwidth=barchoice(t(1));
-x=fix(min(Amp)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Amp)/barwidth)*barwidth+barwidth;
-num = hist(Amp,x);
-lYaxis(n).data{k}=[x' num'];
+lYaxis(n).data{k} = Amp;
 
 if strcmp(hDataGui.Type,'Molecule')==1
-    Int=2*pi*Object.Results(:,7).^2.*Object.Results(:,8);
-    total=(max(Int)-min(Int))/15;
-    [~,t]=min(abs(total-barchoice));
-    barwidth=barchoice(t(1));
-    x=fix(min(Int)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Int)/barwidth)*barwidth+barwidth;
-    num = hist(Int,x);
-    lYaxis(n).data{k+1}=[x' num'];
+    Int=2*pi*(Object.Results(:,7)/Object.PixelSize/(2*sqrt(2*log(2)))).^2.*Object.Results(:,8);
+    lYaxis(n).data{k+1} = Int;
 else
     Len=Object.Results(:,7);
-    total=(max(Len)-min(Len))/15;
-    [~,t]=min(abs(total-barchoice));
-    barwidth=barchoice(t(1));
-    x=fix(min(Len)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Len)/barwidth)*barwidth+barwidth;
-    num = hist(Len,x);
-    lYaxis(n).data{k+1}=[x' num'];
+    lYaxis(n).data{k+1} = Len;
 end
 
-
 Z=Object.Results(:,5);
-if all(isnan(Z)) 
-    total=(max(Z)-min(Z))/15;
-    [~,t]=min(abs(total-barchoice));
-    barwidth=barchoice(t(1));
-    x=fix(min(Z)/barwidth)*barwidth-barwidth:barwidth:ceil(max(Z)/barwidth)*barwidth+barwidth;
-    h = histogram(Z,x);
-    lYaxis(n).data{k+2}=[x' num'];
-else
-    lYaxis(n).data{k+2} = [];
+if ~all(isnan(Z)) 
+    lYaxis(n).data{k+2}=Z;
 end
 set(hDataGui.lYaxis,'UserData',lYaxis);
 
