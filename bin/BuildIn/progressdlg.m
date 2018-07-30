@@ -262,8 +262,10 @@ function progFigure = progressdlg(varargin)
         progHandles.figure = progFigure;
         progHandles.progress = hProgressBar;
         progHandles.text = jText;
-        progHandles.button = jButton;
-
+        if cancel
+            progHandles.button = jButton;
+        end
+        
         % update dialog (only once!)
         drawnow;
 
