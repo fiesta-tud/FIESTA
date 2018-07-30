@@ -233,9 +233,11 @@ function progFigure = progressdlg(varargin)
 
         % create cancel button if 'Cancel' is 'on', Click on button closes the dialog
         if cancel
-            button = uicontrol(progFigure,'Style','pushbutton','Position',[120 10 160 buttonsize],...         
-                                          'String','cancel','Callback','close','FontSize',buttonfont*prog.size);    
-            set(button,'Units','Normalized'); 
+           
+            button = javaObjectEDT('javax.swing.JToggleButton');
+            jButton = javacomponent(button,[120 10 160 buttonsize],progFigure);
+            set(jButton,'Text','cancel','Font',java.awt.Font('Helvetica',java.awt.Font.PLAIN,0.5*buttonsize*prog.size));
+            jButton.isSelected
         end    
   
         % create ProgressBar with java JProgressBar class
@@ -260,6 +262,7 @@ function progFigure = progressdlg(varargin)
         progHandles.figure = progFigure;
         progHandles.progress = hProgressBar;
         progHandles.text = jText;
+        progHandles.button = jButton;
 
         % update dialog (only once!)
         drawnow;
@@ -292,12 +295,20 @@ function progFigure = progressdlg(varargin)
 
         % check event queue for callback of the 'cancel' button
         if cancel
-            pause(10^-12); %flush event queue
-            if ~ishandle(progHandles.figure)
+            if ~ishandle(progHandles.button)
                 % if figure was delete via 'close' callback of 'cancel' button
                 progHandles = [];
                 progFigure = [];
                 return;   % return empty handle     
+            else
+               if progHandles.button.isSelected==1 || progHandles.button.isShowing==0
+                   % if figure was delete via 'cancel' button or 
+                   % 'close' button of dialog
+                    close(progHandles.figure);
+                    progHandles = [];
+                    progFigure = [];
+                    return;   % return empty handle  
+               end
             end
         end
     end
@@ -308,6 +319,9 @@ function progFigure = progressdlg(varargin)
         progHandles =[];
         progFigure = [];
     end
+ 
+function doHelloButtonClicked(~,~)
+        disp('bla');
 
 %% Define input parameters and their default values
 function p = checkInput(value,message)   
