@@ -100,6 +100,7 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
             [m,k] = min(D);
             p = p+1;
         end
+        MolSelect = zeros(1,length(Molecule));
         for n = 1:size(idx,1)
             Z =[];
             for m = size(Molecule(idx(n,1)).Results(:,3),1):-1:1
@@ -112,13 +113,15 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
                 end
             end
             Molecule(idx(n,1)).Results(:,5) = Z;
+            if isempty(Molecule(idx(n,1)).Results)
+                MolSelect(idx(n,1)) = 1;
+            end
         end
-        MolSelect = zeros(1,length(Molecule));
         MolSelect(idx(:,2)) = 1;
         fShared('DeleteTracks',hMainGui,MolSelect,[]);
     end
     
-    Filament = fTransformCoord(Filament,0,0);
+    %Filament = fTransformCoord(Filament,0,0);
     Channel = [Filament.Channel];
     Selected = [Filament.Selected];
     if any(Selected)
@@ -147,6 +150,7 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
             [m,k] = min(D);
             p = p+1;
         end
+        FilSelect = zeros(1,length(Filament));
         for n = 1:size(idx,1)
             ZS =[];
             ZC =[];
@@ -204,8 +208,10 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
                 Filament(idx(n,1)).Results(:,3:5) = Filament(idx(n,1)).PosEnd;
             end
             Filament(idx(n,1)).Results(:,6) = fDis(Filament(idx(n,1)).Results(:,3:5));
+            if isempty(Filament(idx(n,1)).Results)
+                FilSelect(idx(n,1)) = 1;
+            end
         end
-        FilSelect = zeros(1,length(Filament));
         FilSelect(idx(:,2)) = 1;
         fShared('DeleteTracks',hMainGui,[],FilSelect);
     end
