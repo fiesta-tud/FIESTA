@@ -233,11 +233,9 @@ function progFigure = progressdlg(varargin)
 
         % create cancel button if 'Cancel' is 'on', Click on button closes the dialog
         if cancel
-           
             button = javaObjectEDT('javax.swing.JToggleButton');
             jButton = javacomponent(button,[120 10 160 buttonsize],progFigure);
             set(jButton,'Text','cancel','Font',java.awt.Font('Helvetica',java.awt.Font.PLAIN,0.5*buttonsize*prog.size));
-            jButton.isSelected
         end    
   
         % create ProgressBar with java JProgressBar class
