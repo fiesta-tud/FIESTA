@@ -183,12 +183,12 @@ if Config.FirstTFrame>0
                 else
                     s=sprintf('Tracking - Frame: %d - Objects found: %d',n+1,0);
                 end
-                h=progressdlg(n,s);
                 if isempty(h)
                     abort=1;
                     save(fData,'-append','Objects');
                     return
                 end
+                h=progressdlg(n,s);
             end
             
         end

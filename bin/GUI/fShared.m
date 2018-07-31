@@ -1062,7 +1062,11 @@ try
                 aStack = Stack;
             end
             if isempty(Queue(1).Drift)
-                k = Queue(1).Channel;   
+                if numel(aStack)>1
+                    k = Queue(1).Channel;
+                else
+                    k = 1;
+                end 
             else
                 k = 1:numel(Queue(1).Drift);
             end 

@@ -1179,7 +1179,11 @@ end
 
 function timeleft = getTime(starttime,status)
 if status>0
-    runtime = etime(clock,starttime);
+    try
+        runtime = etime(clock,starttime);
+    catch
+        runtime = 0;
+    end
     if runtime>0
         timeleft = sec2timestr( runtime/status - runtime );
     else
