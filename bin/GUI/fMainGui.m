@@ -1581,7 +1581,7 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
                 if ~isempty(Queue)
                     Selected=[Queue.Selected];
                     Queue(Selected==1)=[];
-                    fRightPanel('UpdateQueue',hMainGui.RightPanel.pQueue.LocList,Queue,hMainGui.RightPanel.pQueue.sLocList,'Local');
+                    fRightPanel('UpdateQueue','Local');
                 end
             end
         end

@@ -1088,7 +1088,7 @@ fShared('ReturnFocus');
 function UpdateQueue(mode)
 hMainGui=getappdata(0,'hMainGui');
 global Queue;
-if strcmp(mode,'Local');
+if strcmp(mode,'Local')
     hQueue=hMainGui.RightPanel.pQueue.LocList;
     slider=hMainGui.RightPanel.pQueue.sLocList;
     NewQueue=Queue;
