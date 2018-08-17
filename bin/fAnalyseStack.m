@@ -269,7 +269,7 @@ if ~isempty(Objects)
                     ref_vec = Objects{f}.orientation(:,m)';
                     Molecule(n).Results(j,12) = single(atan(ref_vec(2)/ref_vec(1)));
                 else
-                    norm_vec = Molecule{f}.orientation(:,m)';
+                    norm_vec = Objects{f}.orientation(:,m)';
                     dang = acos( norm_vec(1)*ref_vec(1)+norm_vec(2)*ref_vec(2) );
                     if dang>pi/2
                         dang = dang-pi;
