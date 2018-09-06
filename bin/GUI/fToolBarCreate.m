@@ -12,6 +12,7 @@ hToolBar.ToolThreshImage=ToolThreshImage(hToolBar);
 hToolBar.ToolChannels=ToolChannels(hToolBar);
 hToolBar.ToolKymoGraph=ToolKymoGraph(hToolBar);
 hToolBar.ToolColors=ToolColors(hToolBar);
+fToolBar(''); %create dependency for compiling;
 
 %Create Cursor Button in Toolbar
 function hToolCursor=ToolCursor(hToolBar)

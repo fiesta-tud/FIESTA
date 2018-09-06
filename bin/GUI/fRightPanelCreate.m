@@ -549,4 +549,5 @@ hRightPanel.pButton.bAnalyse = uicontrol('Parent',hRightPanel.pButton.panel,'Cal
                                            'Units','normalized','Style','pushbutton','Tag','bAnalyse',...
                                            'FontSize',12,'FontWeight','normal',...
                                            'Position',[.1 .025 .8 .2],'String','Analyse local queue','Enable','off'); 
-                                       
+
+fRightPanel(''); %create dependency for compiling;

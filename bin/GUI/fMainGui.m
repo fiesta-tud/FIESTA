@@ -54,6 +54,7 @@ hMainGui.LeftPanel=fLeftPanelCreate(hMainGui);
 hMainGui.MidPanel=fMidPanelCreate(hMainGui);
 %create RightPanel
 hMainGui.RightPanel=fRightPanelCreate(hMainGui);
+fShared(''); %create dependency for compiling;
 
 %set(findobj(hMainGui.fig,'-property','KeyPressFcn'),'KeyPressFcn',@CheckKeyPress);
 %set(findobj(hMainGui.fig,'-property','KeyReleaseFcn'),'KeyReleaseFcn',@CheckKeyRelease);

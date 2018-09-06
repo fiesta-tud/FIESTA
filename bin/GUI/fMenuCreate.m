@@ -3,6 +3,9 @@
 %/////////////////////////////////////////////////////////////////////////%
 function hMenu=fMenuCreate(hMainGui)
 %create Data menu
+
+fMenuData(''); %create dependency for compiling;
+
 hMenu.mData=uimenu('Parent',hMainGui.fig,'Label','Data','Tag','mData');
 
 hMenu.mOpenStack = uimenu('Parent',hMenu.mData,'Callback','fMenuData(''OpenStack'',getappdata(0,''hMainGui''));',...
@@ -67,6 +70,9 @@ hMenu.mExit = uimenu('Parent',hMenu.mData,'Callback','close all;',...
                      'Label','Exit','Tag','mExit','Accelerator','E','Separator','on');
                  
 %create Edit menu
+
+fMenuEdit(''); %create dependency for compiling;
+
 hMenu.mEdit = uimenu('Parent',hMainGui.fig,'Label','Edit','Tag','mEdit');
 
 hMenu.mUndo = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''Undo'',getappdata(0,''hMainGui''));','Enable','off',...
@@ -135,6 +141,10 @@ hMenu.mDeleteTracks = uimenu('Parent',hMenu.mEdit,'Callback','fShared(''DeleteTr
                        'Label','Delete selected tracks','Tag','mDeleteTracks','Accelerator','X');                 
 
 %create View menu
+
+fMenuView(''); %create dependency for compiling;
+fExportViewGui(''); %create dependency for compiling;
+
 hMenu.mView = uimenu('Parent',hMainGui.fig,'Label','View','Tag','mView');
 
 hMenu.mFrame = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',getappdata(0,''hMainGui''),[]);','Enable','off',...
@@ -168,6 +178,10 @@ hMenu.mExport = uimenu('Parent',hMenu.mView,'Callback','fExportViewGui(''Create'
                        'Label','Export current view','Tag','mExport','Separator','on');
                    
 %create Options menu
+
+fMenuOptions(''); %create dependency for compiling;
+fConfigGui(''); %create dependency for compiling;
+
 hMenu.mOptions = uimenu('Parent',hMainGui.fig,'Label','Options','Tag','mOptions');
 
 hMenu.mConfig = uimenu('Parent',hMenu.mOptions,'Callback','fConfigGui(''Create'');',...
@@ -192,6 +206,9 @@ hMenu.mLoadCorrections = uimenu('Parent',hMenu.mOptions,'Callback','fMenuOptions
                           'Label','Load corrections','Tag','mLoadCorrections');                       
                         
 %create Tools menu
+
+fMenuTools(''); %create dependency for compiling;
+
 hMenu.mTools = uimenu('Parent',hMainGui.fig,'Label','Tools','Tag','mTools');
 
 hMenu.mMeasureLine = uimenu('Parent',hMenu.mTools,'Callback','fMenuTools(''MeasureLine'',getappdata(0,''hMainGui''));','Enable','off',...
@@ -225,6 +242,15 @@ hMenu.mFilamentScan = uimenu('Parent',hMenu.mTools,'Callback','fMenuTools(''Scan
                              'Label','Use Filament for Scan','Tag','mFilamentScan');     
                      
 %create Statistics menu
+
+fMenuStatistics(''); %create dependency for compiling;
+fPathStatsGui(''); %create dependency for compiling;
+fEstimateMotilityParamsGui(''); %create dependency for compiling;
+fVelocityStatsGui(''); %create dependency for compiling;
+fKymoEval; %create dependency for compiling;
+fBleachEvaluate(''); %create dependency for compiling;
+fFlowEval; %create dependency for compiling;
+
 hMenu.mStats = uimenu('Parent',hMainGui.fig,'Label','Statistics','Tag','mStats');
 
 hMenu.mPathStats = uimenu('Parent',hMenu.mStats,'Callback','fPathStatsGui(''Create'');',...
@@ -245,19 +271,22 @@ hMenu.mAverageFilament = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistic
 hMenu.mAlignFilament = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''AlignFilament'');',...
                     'Label','Align Filaments','Tag','mAlignFilament ');    
                 
-hMenu.mKymoEval = uimenu('Parent',hMenu.mStats,'Callback','fKymoEval;',...
+hMenu.mKymoEval = uimenu('Parent',hMenu.mStats,'Callback','fKymoEval(''Create'');',...
                     'Label','Kymograph Evaluation','Tag','mKymoEval');
                 
 hMenu.mCountObjects = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''CountObjects'',1);',...
                     'Label','Count Objects','Tag','mCountObjects');
                 
-hMenu.mBleachEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fBleachEvaluate;',...
+hMenu.mBleachEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fBleachEvaluate(''Create'');',...
                     'Label','Bleaching Evaluation','Tag','mBleachEvaluate');
                 
-hMenu.mFlowEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fFlowEval;',...
+hMenu.mFlowEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fFlowEval(''Create'');',...
                              'Label','Flow Evaluation','Tag','mFlowEvaluate');
                         
 %create Help menu
+
+fAboutGui(''); %create dependency for compiling;
+
 hMenu.mHelp = uimenu('Parent',hMainGui.fig,'Label','Help','Tag','mHelp');
 
 hMenu.mWebsite = uimenu('Parent',hMenu.mHelp,'Label','Visit FIESTA homepage','Tag','mWebsite','Callback','openhelp');
@@ -272,6 +301,9 @@ hMenu.mAbout = uimenu('Parent',hMenu.mHelp,'Callback','fAboutGui(getappdata(0,''
                       'Label','About FIESTA','Tag','mAbout','Separator','on');
 
 %create region context menu
+
+fMenuContext(''); %create dependency for compiling;
+
 hMenu.ctRegion = uicontextmenu('Parent',hMainGui.fig);
 
 hMenu.mDeleteRegion = uimenu('Parent',hMenu.ctRegion,'Callback','fMenuContext(''DeleteRegion'',getappdata(0,''hMainGui''));',...

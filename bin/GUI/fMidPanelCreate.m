@@ -46,7 +46,9 @@ hMidPanel.tInfoImage = uicontrol('Parent',hMidPanel.pInfo,'Units','normalized','
                                 'Position',[0.2 0 0.35 0.95],'Tag','tInfoImage','String','','HorizontalAlignment','left','BackgroundColor',c);                       
                        
 hMidPanel.tInfoCoord = uicontrol('Parent',hMidPanel.pInfo,'Units','normalized','Style','text','Fontsize',12,...
-                                'Position',[0.55 0 0.4 0.95],'Tag','tInfoCoord','String','','HorizontalAlignment','left','BackgroundColor',c);         
+                                'Position',[0.55 0 0.4 0.95],'Tag','tInfoCoord','String','','HorizontalAlignment','left','BackgroundColor',c);    
+
+fMidPanel(''); %create dependency for compiling;
                                               
 function sFrameDrag(~,event)
 if strcmp(event.EventName,'PostSet')

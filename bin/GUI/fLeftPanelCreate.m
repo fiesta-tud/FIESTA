@@ -249,5 +249,5 @@ hLeftPanel.pRegions.Save = uicontrol('Parent',hLeftPanel.pRegions.panel,'Callbac
                                        'FontSize',10,'FontWeight','normal',...                                             
                                        'Position',[.55 .02 .4 .08],'String','Save');                                            
 
-
+fLeftPanel(''); %create dependency for compiling;
                                        

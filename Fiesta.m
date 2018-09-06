@@ -17,9 +17,11 @@ DirRoot = [fileparts( mfilename('fullpath') ) filesep];
 if isdeployed
     if ispc
         DirCurrent = [pwd filesep];
+        DirUpdater = DirCurrent;
     else
         if isfolder('/Applications/Fiesta.app')
             DirCurrent = DirRoot;
+            DirUpdater = '/Applications/Fiesta.app/Contents/Updater/';
         else
             errordlg({'The FIESTA application is not located in the applications folder','','Please move the Fiesta.app folder to applications','','Support: fiesta@mailbox.tu-dresden.de'},'FIESTA Error','modal');
             return;
@@ -27,6 +29,7 @@ if isdeployed
     end
 else
     DirCurrent = DirRoot;
+    DirUpdater = DirCurrent;
 end
 
 %Set root directory for FIESTA
@@ -57,7 +60,7 @@ end
 version='';
 
 %get local version of FIESTA
-file_id = fopen([DirCurrent 'readme.txt'], 'r'); 
+file_id = fopen([DirUpdater 'readme.txt'], 'r'); 
 if file_id ~= -1
     index = fgetl(file_id);
     str_version = index(66:end);
@@ -100,6 +103,13 @@ if isempty(version)&&isdeployed
                 mkdir('~/Library/Fiesta');
                 copyfile('/Applications/Fiesta.app/Contents/AppData/*','~/Library/Fiesta/');    
             end
+            try
+                fLoadConfig(file_id,'~/Library/Fiesta/fiesta.ini');
+            catch
+                rmdir('~/Library/Fiesta','s');
+                mkdir('~/Library/Fiesta');
+                copyfile('/Applications/Fiesta.app/Contents/AppData/*','~/Library/Fiesta/');  
+            end
         else
             mkdir('~/Library/Fiesta');
             copyfile('/Applications/Fiesta.app/Contents/AppData/*','~/Library/Fiesta/');
@@ -110,6 +120,13 @@ if isempty(version)&&isdeployed
             d1 = dir([DirCurrent 'AppData']);
             d2 = dir(folder);
             if ~isequal([d1.name],[d2.name])
+                rmdir(folder,'s');
+                mkdir(folder);
+                copyfile([DirCurrent 'AppData\*'],folder);    
+            end
+            try
+                fLoadConfig(file_id,[folder '\fiesta.ini']);
+            catch
                 rmdir(folder,'s');
                 mkdir(folder);
                 copyfile([DirCurrent 'AppData\*'],folder);    
@@ -126,7 +143,7 @@ if ~isempty(version)&&status
     if isdeployed
         try
             if ispc
-                uacrun([DirCurrent 'fiestaUpdater.exe'])
+                uacrun.mexw64([DirCurrent 'fiestaUpdater.exe'])
             elseif ismac
                 unix('osascript -e ''do shell script "java -jar /Applications/Fiesta.app/Contents/Updater/FiestaUpdater.jar" with administrator privileges'' &');
             end
@@ -142,6 +159,17 @@ else
         %add path to FIESTA functions
         addpath(genpath(DirBin));
     end
+    
+    % add dependency for compiler
+    if  0   
+        %#function uacrun
+        %#function uacrun.mexw64
+        h = imread('About.jpg');
+        h = imread('uacrun.mexw64');
+        h = imread('uacrun.mexw64');
+        h = imread('bioformats_package.jar');
+    end
+    
     % finally start the application
     try
         fMainGui('Create');
