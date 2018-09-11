@@ -139,7 +139,7 @@ if isempty(version)&&isdeployed
 end
 
 %check whether to download and install FIESTA 
-if ~isempty(version)&&status
+if ~isempty(version)
     if isdeployed
         try
             if ispc
