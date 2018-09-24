@@ -808,8 +808,12 @@ if strcmp(Mode,'Server')
     DirServer = CheckServer;
     if ~isempty(DirServer)
         %get local version of FIESTA
-        if ispc
-            f_id = fopen([DirCurrent 'readme.txt'], 'r'); 
+        if isdeployed
+            if ispc
+                f_id = fopen([DirCurrent 'readme.txt'], 'r'); 
+            else
+                f_id = fopen('/Applications/Fiesta.app/Contents/Updater/readme.txt', 'r'); 
+            end
         else
             f_id = fopen([DirRoot 'readme.txt'], 'r'); 
         end

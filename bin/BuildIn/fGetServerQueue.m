@@ -2,7 +2,7 @@ function [Queue,Status]=fGetServerQueue
 DirServer = fShared('CheckServer');
 Queue=[];
 Status=[];
-if ~isempty(DirServer);
+if ~isempty(DirServer)
     for n=1:2
         files=dir([DirServer 'Queue' filesep 'Job' num2str(n) filesep 'FiestaQueue*.mat']);
         if ~isempty(files)
