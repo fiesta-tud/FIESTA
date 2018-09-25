@@ -2,7 +2,7 @@
 "CurrentFiestaVersion":[1,6,0],
 "DownloadWin":"webswin",
 "DownloadMac":"https://cloudstore.zih.tu-dresden.de/index.php/s/vliDINacvDGP8Bk/download",
-"DownloadSource":"webssource",
+"DownloadSource":"https://cloudstore.zih.tu-dresden.de/index.php/s/SeoNnvwClqeHc9Q/download",
 
 "ArchiveWin":[
 {
@@ -21,8 +21,11 @@
 
 "ArchiveSource":[
 {
+"Version":[1,6,0],
+"Download":"https://cloudstore.zih.tu-dresden.de/index.php/s/6Ixcp2HpeV3j5YL/download"
+},{
 "Version":[1,5,5],
-"Download":"macvers-1.5.5"
+"Download":"https://cloudstore.zih.tu-dresden.de/index.php/s/6Ixcp2HpeV3j5YL/download"
 }],
 
 "WinMCR":[
