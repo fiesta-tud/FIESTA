@@ -75,10 +75,10 @@ else
     pair_idx = [];
     dist = pdist2([x2 y2],[x1 y1]);
     while any(~isnan(dist(:)))
-        [~,idx] = min(dist(:));
-        [id2,id1] = ind2sub(size(dist),idx);
-        idx = [idx id1]; 
-        pair_idx = [pair_idx id2]; 
+        [~,midx] = min(dist(:));
+        [id2,id1] = ind2sub(size(dist),midx);
+        idx = [idx; id1]; 
+        pair_idx = [pair_idx; id2]; 
         dist(id2,:) = NaN;
         dist(:,id1) = NaN;
     end
