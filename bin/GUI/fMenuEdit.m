@@ -22,6 +22,8 @@ switch func
         Undo(varargin{1});
     case 'CombineTracks'
         CombineTracks;
+    case 'DeleteSelectedTracks'
+        DeleteSelectedTracks;
 end
 
 function Sort(mode)
@@ -65,43 +67,33 @@ function CombineTracks
 global Molecule;
 global Filament;
 hMainGui = getappdata(0,'hMainGui');
+fBackUpData(hMainGui);
 hMainGui.Values.PostSpecial = 'Parallax';
 if strcmp(hMainGui.Values.PostSpecial,'Parallax')
     conv_fact = str2double(fInputDlg('Enter Parallax conversion factor:','1')); 
     if isnan(conv_fact)
         conv_fact = 1;
     end
-    %Molecule = fTransformCoord(Molecule,0,0);
     Channel = [Molecule.Channel];
     Selected = [Molecule.Selected];
-    if any(Selected)
-        for n = 1:max(Channel)
-            k = find(Channel==n&Selected);
-            for m = 1:length(k)
-                X = mean(Molecule(k(m)).Results(:,3)/Molecule(k(m)).PixelSize);
-                Y = mean(Molecule(k(m)).Results(:,4)/Molecule(k(m)).PixelSize);
-                points{n}(m,:) = double([k(m) X Y]);
+    stidx = sort(unique([Molecule(Selected==1).Channel]));
+    if any(Selected) && min(stidx)==1 && max(stidx)==2
+        idx = cell(1,2);
+        XY = cell(1,2);
+        for m = 1:2
+            idx{m} = find(Selected==1 & Channel==m);
+            nMol = numel(idx{m});
+            XY{m} = zeros(nMol,2);
+            for n = 1:nMol
+                XY{m}(n,:) = [mean(Molecule(idx{m}(n)).Results(:,3)) mean(Molecule(idx{m}(n)).Results(:,4))]/Molecule(idx{m}(n)).PixelSize;
+            end
+            if m>1
+                pairs = matchReferencePoints(XY{1},XY{2});
             end
         end
-        idx1 = 1:size(points{1},1);
-        [idx2,D] = knnsearch(points{n}(:,2:3),points{1}(:,2:3));
-        [m,k] = min(D);
-        sD = sort(D);
-        id = min([5 length(sD)]);
-        md = max([median(D) sD(id)]);
-        nm = 0;
-        p = 1;
-        while ~isempty(m) && (m<=md || m<mean(nm)+5*std(nm))
-            idx(p,:) = [points{1}(idx1(k),1) points{2}(idx2(k),1)];
-            idx1(k) = [];
-            idx2(k) = [];
-            D(k) = [];
-            nm(p) = m;
-            [m,k] = min(D);
-            p = p+1;
-        end
+        idx = [idx{1}(pairs(:,1))' idx{2}(pairs(:,2))'];
         MolSelect = zeros(1,length(Molecule));
-        for n = 1:size(idx,1)
+        for n = 1:size(pairs,1)
             Z =[];
             for m = size(Molecule(idx(n,1)).Results(:,3),1):-1:1
                 k = find(Molecule(idx(n,1)).Results(m,1)==Molecule(idx(n,2)).Results(:,1),1);
@@ -120,36 +112,24 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
         MolSelect(idx(:,2)) = 1;
         fShared('DeleteTracks',hMainGui,MolSelect,[]);
     end
-    
     %Filament = fTransformCoord(Filament,0,0);
     Channel = [Filament.Channel];
     Selected = [Filament.Selected];
-    if any(Selected)
-        for n = 1:max(Channel)
-            k = find(Channel==n&Selected);
-            for m = 1:length(k)
-                X = mean(Filament(k(m)).Results(:,3)/Filament(k(m)).PixelSize);
-                Y = mean(Filament(k(m)).Results(:,4)/Filament(k(m)).PixelSize);
-                points{n}(m,:) = [k(m) X Y];
+    if any(Selected) && min(stidx)==1 && max(stidx)==2
+        idx = cell(1,2);
+        XY = cell(1,2);
+        for m = 1:2
+            idx{m} = find(Selected==1 & Channel==m);
+            nMol = numel(idx{m});
+            XY{m} = zeros(nMol,2);
+            for n = 1:nMol
+                XY{m}(n,:) = [mean(Filament(idx{m}(n)).Results(:,3)) mean(Filament(idx{m}(n)).Results(:,4))]/Filament(idx{m}(n)).PixelSize;
+            end
+            if m>1
+                pairs = matchReferencePoints(XY{1},XY{2});
             end
         end
-        idx1 = 1:size(points{1},1);
-        [idx2,D] = knnsearch(points{2},points{1});
-        [m,k] = min(D);
-        sD = sort(D);
-        id = min([5 length(sD)]);
-        md = max([median(D) sD(id)]);
-        nm = 0;
-        p = 1;
-        while ~isempty(m) && (m<=md || m<mean(nm)+5*std(nm))
-            idx(p,:) = [points{1}(idx1(k),1) points{2}(idx2(k),1)];
-            idx1(k) = [];
-            idx2(k) = [];
-            D(k) = [];
-            nm(p) = m;
-            [m,k] = min(D);
-            p = p+1;
-        end
+        idx = [idx{1}(pairs(:,1))' idx{2}(pairs(:,2))'];
         FilSelect = zeros(1,length(Filament));
         for n = 1:size(idx,1)
             ZS =[];
@@ -218,6 +198,11 @@ if strcmp(hMainGui.Values.PostSpecial,'Parallax')
   %  set(hMainGui.Menu.mAlignChannels,'Checked','on');
     fShow('Tracks');
 end
+
+function DeleteSelectedTracks
+hMainGui = getappdata(0,'hMainGui');
+fBackUpData(hMainGui);
+fShared('DeleteTracks',hMainGui,[],[]);
 
 function Undo(hMainGui)
 global Molecule;
@@ -426,7 +411,6 @@ NumDriftMol = str2double(fInputDlg('Enter number of molecules:','5'));
 if ~isempty(NumDriftMol)
     R = cell(1,max(Ch));
     XY = cell(1,max(Ch));
-    mXY = cell(1,max(Ch));
     idx = cell(1,max(Ch));
     sidx = cell(1,max(Ch));
     gR = NaN;
@@ -437,27 +421,14 @@ if ~isempty(NumDriftMol)
         cY = zeros(numel(frames),numel(idx{n}));
         nMol = numel(idx{n});
         XY{n} = zeros(nMol,2); 
-        c = [];
         for m = 1:nMol
             if numel(frames)>1
                 cX(:,m) = interp1(Molecule(idx{n}(m)).Results(:,1),Molecule(idx{n}(m)).Results(:,3),frames,'linear','extrap');
                 cY(:,m) = interp1(Molecule(idx{n}(m)).Results(:,1),Molecule(idx{n}(m)).Results(:,4),frames,'linear','extrap');
             end
             XY{n}(m,:) = [mean(Molecule(idx{n}(m)).Results(:,3)) mean(Molecule(idx{n}(m)).Results(:,4))]/Molecule(idx{n}(m)).PixelSize;
-            for n1 = 1:nMol
-                for n2 = 1:nMol
-                    if m~=n1 && m~=n2 && n1~=n2
-                        c = [c; m n1 n2];
-                    end
-                end
-            end
         end
         %c = perms(1:numel(idx{n}));
-        if size(c,2)>2
-            mXY{n} = [XY{n}(c(:,1),1) XY{n}(c(:,1),2) XY{n}(c(:,2),1)-XY{n}(c(:,1),1) XY{n}(c(:,2),2)-XY{n}(c(:,1),2) XY{n}(c(:,3),1)-XY{n}(c(:,1),1) XY{n}(c(:,3),2)-XY{n}(c(:,1),2)];  
-        else
-            mXY{n} = [XY{n}(:,1) XY{n}(:,2) XY{n}(:,1) XY{n}(:,2)];  
-        end
         if numel(frames)>1
             R{n} = sum(0.5*corrcoef(cX)+0.5*corrcoef(cY))/numel(idx{n});
         else
@@ -469,19 +440,13 @@ if ~isempty(NumDriftMol)
                 midx(:,1) = 1:numel(idx{1});
                 gR = R{1};
             else
-                try
-                    p = matchFeatures(mXY{n}(:,3:end),mXY{1}(:,3:end),'Unique',true);
-                    tform = estimateGeometricTransform(mXY{n}(p(:,1),1:2),mXY{1}(p(:,2),1:2),'similarity');
-                    pairs = matchFeatures(XY{1}(:,1:2),transformPointsForward(tform,XY{n}(:,1:2)),'Unique',true);
-                catch
-                    pairs = [];
-                end
+                pairs = matchReferencePoints(XY{n},XY{1});
                 if isempty(pairs)
                     gR(:) = NaN;
                 else
-                    k = ismember(midx(:,1),pairs(:,1));
-                    midx(k,n) = pairs(:,2);
-                    gR(k) = gR(k) + R{n}(pairs(:,2));
+                    k = ismember(midx(:,1),pairs(:,2));
+                    midx(k,n) = pairs(:,1);
+                    gR(k) = gR(k) + R{n}(pairs(:,1));
                     gR(~k) = NaN;
                 end
             end

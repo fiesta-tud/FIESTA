@@ -402,6 +402,8 @@ else
         n=-1;
     end
 end
+hMainGui = getappdata(0,'hMainGui');
+fBackUpData(hMainGui);
 fShared('DeleteTracks',getappdata(0,'hMainGui'),MolSelect,FilSelect);
 if hDataGui.idx==1 && n==-1
     close(hDataGui.fig);

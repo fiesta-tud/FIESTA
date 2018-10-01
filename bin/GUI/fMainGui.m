@@ -1577,6 +1577,7 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
                 else
                     hMainGui.CurrentKey = '';
                 end
+                fBackUpData(hMainGui);
                 fShared('DeleteTracks',hMainGui,[],[]);
             elseif strcmp(get(hMainGui.RightPanel.pQueue.panel,'Visible'),'on')
                 if ~isempty(Queue)
@@ -1587,6 +1588,7 @@ if ~strcmp(get(hMainGui.fig,'Pointer'),'watch')
             end
         end
         if key == 72
+            fBackUpData(hMainGui);
             fShared('DeleteTracks',hMainGui,Inf,Inf);
         end
     end

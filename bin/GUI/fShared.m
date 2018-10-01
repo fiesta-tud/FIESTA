@@ -30,9 +30,7 @@ switch func
     case 'GetLoadDir'
         Object=GetLoadDir;
     case 'SetLoadDir'
-        SetLoadDir(varargin{1});         
-    case 'BackUp'
-        BackUpData(varargin{1});      
+        SetLoadDir(varargin{1});             
     case 'CheckServer'
         Object=CheckServer;   
     case 'AddDataMol'
@@ -78,7 +76,7 @@ function MergeTracks
 global Molecule;
 global Filament;
 hMainGui = getappdata(0,'hMainGui');
-BackUpData(hMainGui);
+fBackUpData(hMainGui);
 MolSelected=[Molecule.Selected];
 FilSelected=[Filament.Selected];
 kMol=find(MolSelected==1);
@@ -97,18 +95,6 @@ elseif ~isempty(kMol)&&~isempty(kFil)
 end
 hMainGui.CurrentKey = [];
 setappdata(0,'hMainGui',hMainGui);
-
-function BackUpData(hMainGui)
-global Molecule;
-global Filament;
-global KymoTrackMol;
-global KymoTrackFil;
-global BackUp;
-BackUp.Molecule = Molecule;
-BackUp.Filament = Filament;
-BackUp.KymoTrackMol = KymoTrackMol;
-BackUp.KymoTrackFil = KymoTrackFil;
-set(hMainGui.Menu.mUndo,'Enable','on');
 
 function InverseSelectedPoints(hMainGui)
 global Molecule;
@@ -236,7 +222,6 @@ global Filament;
 global KymoTrackMol;
 global KymoTrackFil;
 global Stack;
-BackUpData(hMainGui);
 set(hMainGui.fig,'pointer','watch');
 if any(isinf(MolSelect)) || any(isinf(FilSelect))
     if isempty(hMainGui.KymoGraph)
@@ -334,6 +319,7 @@ function ClearTracks(hMainGui)
 global Molecule;
 global Filament;
 global Stack;
+fBackUpData(hMainGui);
 MolSelect=ones(1,length(Molecule));
 FilSelect=ones(1,length(Filament));
 DeleteTracks(hMainGui,MolSelect,FilSelect);
