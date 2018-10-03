@@ -143,7 +143,7 @@ if ~isempty(version)
     if isdeployed
         try
             if ispc
-                uacrun.mexw64([DirCurrent 'fiestaUpdater.exe'])
+                uacrun([DirCurrent 'fiestaUpdater.exe'])
             elseif ismac
                 unix('osascript -e ''do shell script "java -jar /Applications/Fiesta.app/Contents/Updater/FiestaUpdater.jar" with administrator privileges'' &');
             end
@@ -165,7 +165,6 @@ else
         %#function uacrun
         %#function uacrun.mexw64
         h = imread('About.jpg');
-        h = imread('uacrun.mexw64');
         h = imread('uacrun.mexw64');
         h = imread('bioformats_package.jar');
     end
