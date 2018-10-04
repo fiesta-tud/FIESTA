@@ -1,6 +1,6 @@
-function fFlowEval
+function fFlowEval(varargin)
 global Stack;
-if ~isempty(Stack)
+if ~isempty(Stack) && nargin==0
     hFlowEval.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','Name','FIESTA - Kymograph Evaluation','MenuBar','none',...
                          'NumberTitle','off','Position',[0.005 0.032 0.99 0.865],'HandleVisibility','callback',...
                          'Visible','on','NextPlot','add','WindowStyle','modal');

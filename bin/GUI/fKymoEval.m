@@ -1,8 +1,8 @@
-function fKymoEval
+function fKymoEval(varargin)
 global Stack;
 global Filament;
 global FiestaDir;
-if ~isempty(Stack)
+if ~isempty(Stack) && nargin==0
     hMainGui=getappdata(0,'hMainGui');
     hKymoEval.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','Name','FIESTA - Kymograph Evaluation','MenuBar','none',...
                          'NumberTitle','off','Position',[0.005 0.032 0.99 0.865],'HandleVisibility','callback',...
@@ -49,9 +49,19 @@ if ~isempty(Stack)
                                 'Label','Delete','Tag','mDelete ','UserData','Selected');
     hKymoEval.mDeleteAll = uimenu('Parent',hKymoEval.mContext,'Callback',@Delete,...
                                 'Label','Delete all','Tag','mDeleteAll','UserData','All');           
-    mode=fQuestDlg({'How do you like to select lines for the Kymograph creation?','','Maximum Projection - Displays the maximum projection','Filament Image - Displays an image of the filaments ','Filament Positions - Uses the tracked filament positions (Objects)'},'FIESTA - Kymograph Evaluation',{'<html><CENTER>Maximum<br><CENTER>Projection','<html><CENTER>Filament<br><CENTER>Image','<html><CENTER>Filament<br><CENTER>Positions'},'<html><CENTER>Maximum<br><CENTER>Projection');
+    mode = fQuestDlg({'How do you like to select lines for the Kymograph creation?',...
+                    'Maximum Projection - Displays the maximum projection',...
+                    'Average Projection - Displays the average projection',...
+                    'Filament Image - Displays an image of the filaments ',...
+                    'Filament Positions - Uses the tracked filament positions (Objects)'},...
+                    'FIESTA - Kymograph Evaluation',...
+                    {'Maximum Projection','Average Projection','Filament Image','Filament Positions'},'Maximum Projection');
+    if isempty(mode)
+        return;
+    end
     maxImage = getappdata(hMainGui.fig,'MaxImage');
-    if strcmp(mode,'<html><CENTER>Filament<br><CENTER>Image')
+    averageImage = getappdata(hMainGui.fig,'AverageImage');
+    if strcmp(mode,'Filament Image')
         [filfile,filpath]=uigetfile({'*.stk;*.tif;*.tiff','Images (*.stk,*.tif,*.tiff)'},'Select Filament Image',FiestaDir.Stack);
         if filfile==0
             close(hKymoEval.fig);
@@ -59,6 +69,8 @@ if ~isempty(Stack)
         end
         [I,~,~]=fStackRead([filpath filfile]);
         hKymoEval.ref = I{1};
+    elseif strcmp(mode,'Average Projection')
+        hKymoEval.ref = averageImage(:,:,1);
     else
         hKymoEval.ref = maxImage(:,:,1);
     end
@@ -81,7 +93,7 @@ if ~isempty(Stack)
             slider_step=[0.1 0.1];
         end
         set(hKymoEval.sContrast,'sliderstep',slider_step,'Min',PixMin,'Max',PixMax,'Value',mContrast);
-        if strcmp(mode,'<html><CENTER>Filament<br><CENTER>Positions') && ~isempty(Filament)        
+        if strcmp(mode,'Filament Positions') && ~isempty(Filament)        
             for n=1:length(Filament)
                 hKymoEval.Line{n} = double([Filament(n).Data{1}(:,1) Filament(n).Data{1}(:,2)])/hMainGui.Values.PixSize;
                 hKymoEval.Line{n}(hKymoEval.Line{n}(:,1)<1|hKymoEval.Line{n}(:,2)<1,:)=[];
@@ -347,7 +359,7 @@ else
     ssize = ssize * 0.125;
     big = ceil(0.26*ssize);
     small = ssize - 3*big-19;
-    set(hKymoEval.lResults,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'numeric','bank','bank','bank'},'ColumnWidth',{small,big,big,big},'RowName','','ColumnName',{'Idx','<html><CENTER>Distance<br><CENTER>[?m]','<html><CENTER>Time<br><CENTER>[s]','<html><CENTER>Velocity<br><CENTER>[?m/s]'});
+    set(hKymoEval.lResults,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'numeric','bank','bank','bank'},'ColumnWidth',{small,big,big,big},'RowName','','ColumnName',{'Idx',['<html><CENTER>Distance<br><CENTER>[' char(181) 'm]'],'<html><CENTER>Time<br><CENTER>[s]',['<html><CENTER>Velocity<br><CENTER>[' char(181) 'm/s]']});
     set(hKymoEval.bSave,'Enable','on');
     set(hKymoEval.bExport,'Enable','on');
 end

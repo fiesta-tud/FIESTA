@@ -137,7 +137,7 @@ hMenu.mMergeTracks = uimenu('Parent',hMenu.mEdit,'Callback','fShared(''MergeTrac
 hMenu.mCombineTracks = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''CombineTracks'');','Enable','off',...
                     'Label','Combine selected tracks','Tag','mCombineTracks');
 
-hMenu.mDeleteTracks = uimenu('Parent',hMenu.mEdit,'Callback','fMenuEdit(''DeleteSelectedTracks'');','Enable','off',...
+hMenu.mDeleteTracks = uimenu('Parent',hMenu.mEdit,'Callback','fShared(''DeleteTracks'',getappdata(0,''hMainGui''),[],[]);','Enable','off',...
                        'Label','Delete selected tracks','Tag','mDeleteTracks','Accelerator','X');                 
 
 %create View menu
@@ -247,9 +247,9 @@ fMenuStatistics(''); %create dependency for compiling;
 fPathStatsGui(''); %create dependency for compiling;
 fEstimateMotilityParamsGui(''); %create dependency for compiling;
 fVelocityStatsGui(''); %create dependency for compiling;
-fKymoEval; %create dependency for compiling;
+fKymoEval('') %create dependency for compiling;
 fBleachEvaluate(''); %create dependency for compiling;
-fFlowEval; %create dependency for compiling;
+fFlowEval(''); %create dependency for compiling;
 
 hMenu.mStats = uimenu('Parent',hMainGui.fig,'Label','Statistics','Tag','mStats');
 
@@ -271,16 +271,16 @@ hMenu.mAverageFilament = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistic
 hMenu.mAlignFilament = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''AlignFilament'');',...
                     'Label','Align Filaments','Tag','mAlignFilament ');    
                 
-hMenu.mKymoEval = uimenu('Parent',hMenu.mStats,'Callback','fKymoEval(''Create'');',...
+hMenu.mKymoEval = uimenu('Parent',hMenu.mStats,'Callback','fKymoEval;',...
                     'Label','Kymograph Evaluation','Tag','mKymoEval');
                 
 hMenu.mCountObjects = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''CountObjects'',1);',...
                     'Label','Count Objects','Tag','mCountObjects');
                 
-hMenu.mBleachEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fBleachEvaluate(''Create'');',...
+hMenu.mBleachEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fBleachEvaluate;',...
                     'Label','Bleaching Evaluation','Tag','mBleachEvaluate');
                 
-hMenu.mFlowEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fFlowEval(''Create'');',...
+hMenu.mFlowEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fFlowEval;',...
                              'Label','Flow Evaluation','Tag','mFlowEvaluate');
                         
 %create Help menu
@@ -452,7 +452,7 @@ hMenu.ListMol.mSetReference = uimenu('Parent',hMenu.ctListMol,'Callback','fShare
 hMenu.ListMol.mMerge = uimenu('Parent',hMenu.ctListMol,'Callback','fShared(''MergeTracks'',getappdata(0,''hMainGui''));',...
                                 'Label','Join selected tracks','Separator','on','Tag','mMergeMol','UserData','Molecule');
 
-hMenu.ListMol.mDelete = uimenu('Parent',hMenu.ctListMol,'Callback','fMenuEdit(''DeleteSelectedTracks'');',...
+hMenu.ListMol.mDelete = uimenu('Parent',hMenu.ctListMol,'Callback','fShared(''DeleteTracks'',getappdata(0,''hMainGui''),[],[]);',...
                                 'Label','Delete selected tracks','Tag','mDelete');   
                             
 %create microtubule list context menu                                     
@@ -499,7 +499,7 @@ hMenu.ListFil.Mark.mPink = uimenu('Parent',hMenu.ListFil.mMarkSelection,'Callbac
 hMenu.ListFil.mMerge = uimenu('Parent',hMenu.ctListFil,'Callback','fShared(''MergeTracks'',getappdata(0,''hMainGui''));',...
                                 'Label','Join selected tracks','Separator','on','Tag','mMergeFil','UserData','Filament');
 
-hMenu.ListFil.mDelete = uimenu('Parent',hMenu.ctListFil,'Callback','fMenuEdit(''DeleteSelectedTracks'');',...
+hMenu.ListFil.mDelete = uimenu('Parent',hMenu.ctListFil,'Callback','fShared(''DeleteTracks'',getappdata(0,''hMainGui''),[],[]);',...
                                 'Label','Delete selected tracks','Tag','mDelete');   
                             
 %create local queue context menu                                     
