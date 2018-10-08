@@ -2,7 +2,10 @@ function fKymoEval(varargin)
 global Stack;
 global Filament;
 global FiestaDir;
-if ~isempty(Stack) && nargin==0
+if isempty(Stack) && nargin==0
+    fMsgDlg('No Stack present!','error');
+    return;
+elseif ~isempty(Stack) && nargin==0
     hMainGui=getappdata(0,'hMainGui');
     hKymoEval.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','Name','FIESTA - Kymograph Evaluation','MenuBar','none',...
                          'NumberTitle','off','Position',[0.005 0.032 0.99 0.865],'HandleVisibility','callback',...

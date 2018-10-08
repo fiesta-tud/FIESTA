@@ -88,10 +88,18 @@ end
 
 function Exit(hObject,eventdata) %#ok<INUSD>
 global PathBackup;
-button = fQuestDlg('Closing FIESTA, are you sure?','Close FIESTA',{'Yes','No'},'No');
+global DirCurrent;
+try
+    button = fQuestDlg('Closing FIESTA, are you sure?','Close FIESTA',{'Yes','No'},'No');
+catch
+    button = questdlg('Closing FIESTA, are you sure?','Close FIESTA','Yes','No','No');
+end
 if strcmp(button,'Yes')
     if ~isempty(PathBackup)
         path(PathBackup);
+    end
+    if isfolder([DirCurrent 'fiestastatus'])
+       rmdir([DirCurrent 'fiestastatus'],'s');
     end
     delete(findobj('Tag','hAboutGui'));
     delete(findobj('Tag','hAverageSpeedGui'));
@@ -329,298 +337,301 @@ global KymoTrackFil;
 global Stack;
 global TrackInfo;
 global TimeInfo;
-hMainGui=getappdata(0,'hMainGui');
-PixSize=hMainGui.Values.PixSize;
-xyMid=get(hMainGui.MidPanel.pView,'Position');
-cpFig=get(hMainGui.fig,'CurrentPoint');
-xyKymo=get(hMainGui.MidPanel.aKymoGraph,{'xlim','ylim'});
-cpKymo=get(hMainGui.MidPanel.aKymoGraph,'currentpoint');
-cpKymo=cpKymo(1,[1 2]);
-xyView=get(hMainGui.MidPanel.aView,{'xlim','ylim'});
-cpView=get(hMainGui.MidPanel.aView,'currentpoint');
-stidx = getChannels(hMainGui);
-if ~isempty(Stack)
-    if real(getFrameIdx(hMainGui))>0
-        [y,x,~]=size(Stack{1});
-        xyView{1}=[max([1 xyView{1}(1)]) min([x xyView{1}(2)])];
-        xyView{2}=[max([1 xyView{2}(1)]) min([y xyView{2}(2)])];
+try
+    hMainGui=getappdata(0,'hMainGui');
+    PixSize=hMainGui.Values.PixSize;
+    xyMid=get(hMainGui.MidPanel.pView,'Position');
+    cpFig=get(hMainGui.fig,'CurrentPoint');
+    xyKymo=get(hMainGui.MidPanel.aKymoGraph,{'xlim','ylim'});
+    cpKymo=get(hMainGui.MidPanel.aKymoGraph,'currentpoint');
+    cpKymo=cpKymo(1,[1 2]);
+    xyView=get(hMainGui.MidPanel.aView,{'xlim','ylim'});
+    cpView=get(hMainGui.MidPanel.aView,'currentpoint');
+    stidx = getChannels(hMainGui);
+    if ~isempty(Stack)
+        if real(getFrameIdx(hMainGui))>0
+            [y,x,~]=size(Stack{1});
+            xyView{1}=[max([1 xyView{1}(1)]) min([x xyView{1}(2)])];
+            xyView{2}=[max([1 xyView{2}(1)]) min([y xyView{2}(2)])];
+        end
     end
-end
-if ~isempty(hMainGui.KymoImage)
-    [y,x,~]=size(hMainGui.KymoImage);
-    xyKymo{1}=[max([1 xyKymo{1}(1)]) min([x xyKymo{1}(2)])];
-    xyKymo{2}=[max([1 xyKymo{2}(1)]) min([y xyKymo{2}(2)])];
-end
-cpView=cpView(1,[1 2]);
-strInfo=[];
-if all(hMainGui.Values.CursorDownPos==0)||strcmp(hMainGui.CurrentKey,'shift')
-    if ~isempty(hMainGui.Plots.SelectRegion)
-        hMainGui=DeleteSelectRegion(hMainGui);
+    if ~isempty(hMainGui.KymoImage)
+        [y,x,~]=size(hMainGui.KymoImage);
+        xyKymo{1}=[max([1 xyKymo{1}(1)]) min([x xyKymo{1}(2)])];
+        xyKymo{2}=[max([1 xyKymo{2}(1)]) min([y xyKymo{2}(2)])];
     end
-end
-if all(cpFig>=[xyMid(1) xyMid(2)]) && all(cpFig<=[xyMid(1)+xyMid(3) xyMid(2)+xyMid(4)])
-    if strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'on')
-        hMainGui.CurrentAxes='Kymo';
+    cpView=cpView(1,[1 2]);
+    strInfo=[];
+    if all(hMainGui.Values.CursorDownPos==0)||strcmp(hMainGui.CurrentKey,'shift')
+        if ~isempty(hMainGui.Plots.SelectRegion)
+            hMainGui=DeleteSelectRegion(hMainGui);
+        end
+    end
+    if all(cpFig>=[xyMid(1) xyMid(2)]) && all(cpFig<=[xyMid(1)+xyMid(3) xyMid(2)+xyMid(4)])
+        if strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'on')
+            hMainGui.CurrentAxes='Kymo';
+        else
+            hMainGui.CurrentAxes='View';
+        end
     else
-        hMainGui.CurrentAxes='View';
+        hMainGui.CurrentAxes='none';    
+        set(hMainGui.MidPanel.tInfoImage,'String','');
+        set(hMainGui.MidPanel.tInfoCoord,'String','');   
+        if ~strcmp(get(hMainGui.fig,'pointer'),'watch')
+            set(hMainGui.fig,'pointer','arrow');    
+        end   
     end
-else
-    hMainGui.CurrentAxes='none';    
-    set(hMainGui.MidPanel.tInfoImage,'String','');
-    set(hMainGui.MidPanel.tInfoCoord,'String','');   
-    if ~strcmp(get(hMainGui.fig,'pointer'),'watch')
-        set(hMainGui.fig,'pointer','arrow');    
-    end   
-end
-if strcmp(hMainGui.CurrentAxes,'Kymo') && all(cpKymo>=[xyKymo{1}(1) xyKymo{2}(1)]) && all(cpKymo<=[xyKymo{1}(2) xyKymo{2}(2)])
-    xy=xyKymo;
-    cp=cpKymo;
-    dx=((xy{1}(2)-xy{1}(1))/50);
-    dy=((xy{2}(2)-xy{2}(1))/50);
-    hMainGui.CurrentAxesHandle=hMainGui.MidPanel.aKymoGraph;
-    if strcmp(hMainGui.CursorMode,'Normal')==1
-        if any(hMainGui.Values.CursorDownPos~=0)
-            %if user is holding button create selection region
-             hMainGui.SelectRegion.X=[hMainGui.SelectRegion.X cp(1)];
-             hMainGui.SelectRegion.Y=[hMainGui.SelectRegion.Y cp(2)];
-             bx=[hMainGui.SelectRegion.X hMainGui.SelectRegion.X(1)];
-             by=[hMainGui.SelectRegion.Y hMainGui.SelectRegion.Y(1)];
-             if isempty(hMainGui.Plots.SelectRegion)
-                 hMainGui.Plots.SelectRegion=line(hMainGui.MidPanel.aKymoGraph,bx,by,'Color','white','LineStyle',':','Tag','pSelectRegion','EraseMode','background');                     
-             else
-                 set(hMainGui.Plots.SelectRegion,'XData',bx,'YData',by);
-             end
-        else
-            if ~isempty(KymoTrackMol)
-                [strInfo,List]=TrackLabels(Molecule,KymoTrackMol,cp,dx,dy,PixSize,stidx);
-                Mode='Molecule';
-                Object=Molecule;
-            end
-            if ~isempty(KymoTrackFil)&&isempty(strInfo)
-                [strInfo,List]=TrackLabels(Filament,KymoTrackFil,cp,dx,dy,PixSize,stidx);
-                Mode='Filament';
-                Object=Filament;
-            end 
-        end
-        idx = real(getFrameIdx(hMainGui));
-        Img=hMainGui.KymoImage;
-        if all(size(Img(:,:,1))>=[round(cp(2)) round(cp(1))]) && all(round(cp)>0)
-            v=Img(round(cp(2)),round(cp(1)), min(idx(1),size(Img,3)));
-            set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     Value: %d',round(cp(1)),round(cp(2)),v));
-            t=ceil(cp(2));
-            tstart=str2double(get(hMainGui.RightPanel.pTools.eKymoStart,'String'))-1;
-            if t+tstart<=length(TimeInfo{idx(1)})
-                time = (TimeInfo{idx(1)}(t+tstart)-TimeInfo{idx(1)}(1))/1000;
+    if strcmp(hMainGui.CurrentAxes,'Kymo') && all(cpKymo>=[xyKymo{1}(1) xyKymo{2}(1)]) && all(cpKymo<=[xyKymo{1}(2) xyKymo{2}(2)])
+        xy=xyKymo;
+        cp=cpKymo;
+        dx=((xy{1}(2)-xy{1}(1))/50);
+        dy=((xy{2}(2)-xy{2}(1))/50);
+        hMainGui.CurrentAxesHandle=hMainGui.MidPanel.aKymoGraph;
+        if strcmp(hMainGui.CursorMode,'Normal')==1
+            if any(hMainGui.Values.CursorDownPos~=0)
+                %if user is holding button create selection region
+                 hMainGui.SelectRegion.X=[hMainGui.SelectRegion.X cp(1)];
+                 hMainGui.SelectRegion.Y=[hMainGui.SelectRegion.Y cp(2)];
+                 bx=[hMainGui.SelectRegion.X hMainGui.SelectRegion.X(1)];
+                 by=[hMainGui.SelectRegion.Y hMainGui.SelectRegion.Y(1)];
+                 if isempty(hMainGui.Plots.SelectRegion)
+                     hMainGui.Plots.SelectRegion=line(hMainGui.MidPanel.aKymoGraph,bx,by,'Color','white','LineStyle',':','Tag','pSelectRegion','EraseMode','background');                     
+                 else
+                     set(hMainGui.Plots.SelectRegion,'XData',bx,'YData',by);
+                 end
             else
-                time = [];
-            end
-            set(hMainGui.MidPanel.tInfoCoord,'String',['Coordinates X: ' num2str(cp(1)*get(hMainGui.KymoGraph,'UserData')*hMainGui.Values.PixSize/1000,'%0.3f') ...
-                ' ' char(956) 'm     Y: ' num2str(time,'%0.3f') ' s']);
-        end
-    end
-elseif strcmp(hMainGui.CurrentAxes,'View') && all(cpView>=[xyView{1}(1) xyView{2}(1)]) && all(cpView<=[xyView{1}(2) xyView{2}(2)]) && strcmp(get(hMainGui.MidPanel.pView,'Visible'),'on')
-    xy=xyView;
-    cp=cpView;
-    dx=((xy{1}(2)-xy{1}(1))/100);
-    dy=((xy{2}(2)-xy{2}(1))/100);
-    hMainGui.CurrentAxesHandle=hMainGui.MidPanel.aView; 
-    if strcmp(hMainGui.CursorMode,'Normal')==1
-        if any(hMainGui.Values.CursorDownPos~=0)
-             color='black';
-             if ~isempty(Stack)
-                 color='white';
-             end
-            %if user is holding button create selection region
-             hMainGui.SelectRegion.X=[hMainGui.SelectRegion.X cp(1)];
-             hMainGui.SelectRegion.Y=[hMainGui.SelectRegion.Y cp(2)];
-             bx=[hMainGui.SelectRegion.X hMainGui.SelectRegion.X(1)];
-             by=[hMainGui.SelectRegion.Y hMainGui.SelectRegion.Y(1)];
-             if isempty(hMainGui.Plots.SelectRegion)
-                 hMainGui.Plots.SelectRegion=line(hMainGui.MidPanel.aView,bx,by,'Color',color,'LineStyle',':','Tag','pSelectRegion');                           
-             else
-                 try
-                    set(hMainGui.Plots.SelectRegion,'XData',bx,'YData',by);
-                 catch
-                     hMainGui.Plots.SelectRegion = [];
-                 end     
-             end
-        else
-            if ~isempty(Stack)
-                if all(isreal(getFrameIdx(hMainGui)))
-                    idx = getFrameIdx(hMainGui);
-                    Img = Stack{idx(1)}(:,:,idx(2));
-                    v=Img(round(cp(2)),round(cp(1)));
-                    set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     Value: %d',round(cp(1)),round(cp(2)),v));
-                else
-                    set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     ',round(cp(1)),round(cp(2))));
-                end
-            end
-            set(hMainGui.MidPanel.tInfoCoord,'String',['Coordinates X: ' num2str(cp(1)*PixSize/1000,'%0.3f') ' ' char(956) 'm     Y: ' num2str(cp(2)*PixSize/1000,'%0.3f') ' ' char(956) 'm']);
-            if all(hMainGui.Values.CursorDownPos==0)
-                if ~isempty(Molecule)
-                    [strInfo,List]=TrackLabels(Molecule,[],cp,dx,dy,PixSize,stidx);
-                    Mode='Molecule';   
+                if ~isempty(KymoTrackMol)
+                    [strInfo,List]=TrackLabels(Molecule,KymoTrackMol,cp,dx,dy,PixSize,stidx);
+                    Mode='Molecule';
                     Object=Molecule;
                 end
-                if ~isempty(Filament)&&isempty(strInfo)
-                    [strInfo,List]=TrackLabels(Filament,[],cp,dx,dy,PixSize,stidx);
-                    Mode='Filament';   
+                if ~isempty(KymoTrackFil)&&isempty(strInfo)
+                    [strInfo,List]=TrackLabels(Filament,KymoTrackFil,cp,dx,dy,PixSize,stidx);
+                    Mode='Filament';
                     Object=Filament;
-                end                
+                end 
             end
-        end
-    elseif strcmp(hMainGui.CursorMode,'Region')==1
-        cp=round(cp);
-        CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,2,2,2,2,2,2,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,2,2,2,2,2,2,2,2,2,2,NaN,NaN,NaN;NaN,NaN,2,2,2,NaN,NaN,2,2,NaN,NaN,2,2,2,NaN,NaN;NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;2,2,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,2,2;2,2,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,2,2;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN;NaN,NaN,2,2,2,NaN,NaN,2,2,NaN,NaN,2,2,2,NaN,NaN;NaN,NaN,NaN,2,2,2,2,2,2,2,2,2,2,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,2,2,2,2,2,2,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN;];
-        set(hMainGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[8 8])
-        nRegion=length(hMainGui.Region);
-        if all(hMainGui.Values.CursorDownPos>0) && nRegion>0         
-            hMainGui.Region(nRegion).X=[hMainGui.Region(nRegion).X cp(1)];
-            hMainGui.Region(nRegion).Y=[hMainGui.Region(nRegion).Y cp(2)];
-            bx=[hMainGui.Region(nRegion).X hMainGui.Region(nRegion).X(1)];
-            by=[hMainGui.Region(nRegion).Y hMainGui.Region(nRegion).Y(1)];
-            set(hMainGui.Plots.Region(nRegion),'XData',bx,'YData',by);
-        end
-    elseif strcmp(hMainGui.CursorMode,'RectRegion')==1
-        cp=round(cp);
-        set(hMainGui.fig,'pointer','crosshair');
-        if all(hMainGui.Values.CursorDownPos>0)
-            nRegion=length(hMainGui.Region);
-            hMainGui.Region(nRegion).X=[hMainGui.Values.CursorDownPos(1) cp(1) cp(1) hMainGui.Values.CursorDownPos(1)];
-            hMainGui.Region(nRegion).Y=[hMainGui.Values.CursorDownPos(2) hMainGui.Values.CursorDownPos(2) cp(2) cp(2)];
-            bx=[hMainGui.Region(nRegion).X hMainGui.Values.CursorDownPos(1)];
-            by=[hMainGui.Region(nRegion).Y hMainGui.Values.CursorDownPos(2)];
-            set(hMainGui.Plots.Region(nRegion),'XData',bx,'YData',by);
-        end
-    elseif strcmp(hMainGui.CursorMode,'Pan')==0&&strcmp(hMainGui.CursorMode,'Zoom')==0
-        set(hMainGui.fig,'pointer','crosshair')
-        if all(hMainGui.Values.CursorDownPos>0)
-            nMeasure=length(hMainGui.Measure);
-            if strcmp(hMainGui.CursorMode,'Line')==1||strcmp(hMainGui.CursorMode,'SegLine')==1
-                bx=[hMainGui.Measure(nMeasure).X cp(1)];
-                by=[hMainGui.Measure(nMeasure).Y cp(2)];
-            end
-            if strcmp(hMainGui.CursorMode,'LineScan')==1||strcmp(hMainGui.CursorMode,'SegLineScan')==1
-                bx=[hMainGui.Scan.X cp(1)];
-                by=[hMainGui.Scan.Y cp(2)];
-            end
-            if strcmp(hMainGui.CursorMode,'Freehand')==1
-                if max((hMainGui.Measure(nMeasure).X==cp(1))+(hMainGui.Measure(nMeasure).Y==cp(2)))<2
-                    hMainGui.Measure(nMeasure).X=[hMainGui.Measure(nMeasure).X cp(1)];
-                    hMainGui.Measure(nMeasure).Y=[hMainGui.Measure(nMeasure).Y cp(2)];
+            idx = real(getFrameIdx(hMainGui));
+            Img=hMainGui.KymoImage;
+            if all(size(Img(:,:,1))>=[round(cp(2)) round(cp(1))]) && all(round(cp)>0)
+                v=Img(round(cp(2)),round(cp(1)), min(idx(1),size(Img,3)));
+                set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     Value: %d',round(cp(1)),round(cp(2)),v));
+                t=ceil(cp(2));
+                tstart=str2double(get(hMainGui.RightPanel.pTools.eKymoStart,'String'))-1;
+                if t+tstart<=length(TimeInfo{idx(1)})
+                    time = (TimeInfo{idx(1)}(t+tstart)-TimeInfo{idx(1)}(1))/1000;
+                else
+                    time = [];
                 end
-                bx=[hMainGui.Measure(nMeasure).X cp(1)];
-                by=[hMainGui.Measure(nMeasure).Y cp(2)];
+                set(hMainGui.MidPanel.tInfoCoord,'String',['Coordinates X: ' num2str(cp(1)*get(hMainGui.KymoGraph,'UserData')*hMainGui.Values.PixSize/1000,'%0.3f') ...
+                    ' ' char(956) 'm     Y: ' num2str(time,'%0.3f') ' s']);
             end
-            if strcmp(hMainGui.CursorMode,'FreehandScan')==1
-                if max((hMainGui.Scan.X==cp(1))+(hMainGui.Scan.Y==cp(2)))<2
-                    hMainGui.Scan.X=[hMainGui.Scan.X cp(1)];
-                    hMainGui.Scan.Y=[hMainGui.Scan.Y cp(2)];
-                end
-                bx=[hMainGui.Scan.X cp(1)];
-                by=[hMainGui.Scan.Y cp(2)];
-            end
-            if strcmp(hMainGui.CursorMode,'Rectangle')==1
-                hMainGui.Measure(nMeasure).X=[hMainGui.Values.CursorDownPos(1) cp(1) cp(1) hMainGui.Values.CursorDownPos(1)];
-                hMainGui.Measure(nMeasure).Y=[hMainGui.Values.CursorDownPos(2) hMainGui.Values.CursorDownPos(2) cp(2) cp(2)];
-                bx=[hMainGui.Measure(nMeasure).X hMainGui.Values.CursorDownPos(1)];
-                by=[hMainGui.Measure(nMeasure).Y hMainGui.Values.CursorDownPos(2)]; 
-            end
-            if strcmp(hMainGui.CursorMode,'Ellipse')==1
-                t=0:.01:2*pi;
-                bx=(hMainGui.Measure(nMeasure).X+cp(1))/2+abs(hMainGui.Measure(nMeasure).X-cp(1))/2*cos(t);
-                by=(hMainGui.Measure(nMeasure).Y+cp(2))/2+abs(hMainGui.Measure(nMeasure).Y-cp(2))/2*sin(t);
-            end
-            if strcmp(hMainGui.CursorMode,'Polygon')==1
-                bx=[hMainGui.Measure(nMeasure).X cp(1) hMainGui.Measure(nMeasure).X(1)];
-                by=[hMainGui.Measure(nMeasure).Y cp(2) hMainGui.Measure(nMeasure).Y(1)];
-            end
-            if ~isempty(strfind(hMainGui.CursorMode,'Scan'))
-                set(hMainGui.Plots.Scan,'XData',bx,'YData',by);
+        end
+    elseif strcmp(hMainGui.CurrentAxes,'View') && all(cpView>=[xyView{1}(1) xyView{2}(1)]) && all(cpView<=[xyView{1}(2) xyView{2}(2)]) && strcmp(get(hMainGui.MidPanel.pView,'Visible'),'on')
+        xy=xyView;
+        cp=cpView;
+        dx=((xy{1}(2)-xy{1}(1))/100);
+        dy=((xy{2}(2)-xy{2}(1))/100);
+        hMainGui.CurrentAxesHandle=hMainGui.MidPanel.aView; 
+        if strcmp(hMainGui.CursorMode,'Normal')==1
+            if any(hMainGui.Values.CursorDownPos~=0)
+                 color='black';
+                 if ~isempty(Stack)
+                     color='white';
+                 end
+                %if user is holding button create selection region
+                 hMainGui.SelectRegion.X=[hMainGui.SelectRegion.X cp(1)];
+                 hMainGui.SelectRegion.Y=[hMainGui.SelectRegion.Y cp(2)];
+                 bx=[hMainGui.SelectRegion.X hMainGui.SelectRegion.X(1)];
+                 by=[hMainGui.SelectRegion.Y hMainGui.SelectRegion.Y(1)];
+                 if isempty(hMainGui.Plots.SelectRegion)
+                     hMainGui.Plots.SelectRegion=line(hMainGui.MidPanel.aView,bx,by,'Color',color,'LineStyle',':','Tag','pSelectRegion');                           
+                 else
+                     try
+                        set(hMainGui.Plots.SelectRegion,'XData',bx,'YData',by);
+                     catch
+                         hMainGui.Plots.SelectRegion = [];
+                     end     
+                 end
             else
-                set(hMainGui.Plots.Measure(nMeasure),'XData',bx,'YData',by);
+                if ~isempty(Stack)
+                    if all(isreal(getFrameIdx(hMainGui)))
+                        idx = getFrameIdx(hMainGui);
+                        Img = Stack{idx(1)}(:,:,idx(2));
+                        v=Img(round(cp(2)),round(cp(1)));
+                        set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     Value: %d',round(cp(1)),round(cp(2)),v));
+                    else
+                        set(hMainGui.MidPanel.tInfoImage,'String',sprintf('Image X: %03.0f     Y: %03.0f     ',round(cp(1)),round(cp(2))));
+                    end
+                end
+                set(hMainGui.MidPanel.tInfoCoord,'String',['Coordinates X: ' num2str(cp(1)*PixSize/1000,'%0.3f') ' ' char(956) 'm     Y: ' num2str(cp(2)*PixSize/1000,'%0.3f') ' ' char(956) 'm']);
+                if all(hMainGui.Values.CursorDownPos==0)
+                    if ~isempty(Molecule)
+                        [strInfo,List]=TrackLabels(Molecule,[],cp,dx,dy,PixSize,stidx);
+                        Mode='Molecule';   
+                        Object=Molecule;
+                    end
+                    if ~isempty(Filament)&&isempty(strInfo)
+                        [strInfo,List]=TrackLabels(Filament,[],cp,dx,dy,PixSize,stidx);
+                        Mode='Filament';   
+                        Object=Filament;
+                    end                
+                end
+            end
+        elseif strcmp(hMainGui.CursorMode,'Region')==1
+            cp=round(cp);
+            CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,2,2,2,2,2,2,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,2,2,2,2,2,2,2,2,2,2,NaN,NaN,NaN;NaN,NaN,2,2,2,NaN,NaN,2,2,NaN,NaN,2,2,2,NaN,NaN;NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;2,2,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,2,2;2,2,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,2,2;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN;NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN;NaN,NaN,2,2,2,NaN,NaN,2,2,NaN,NaN,2,2,2,NaN,NaN;NaN,NaN,NaN,2,2,2,2,2,2,2,2,2,2,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,2,2,2,2,2,2,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,NaN,NaN,2,2,NaN,NaN,NaN,NaN,NaN,NaN,NaN;];
+            set(hMainGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[8 8])
+            nRegion=length(hMainGui.Region);
+            if all(hMainGui.Values.CursorDownPos>0) && nRegion>0         
+                hMainGui.Region(nRegion).X=[hMainGui.Region(nRegion).X cp(1)];
+                hMainGui.Region(nRegion).Y=[hMainGui.Region(nRegion).Y cp(2)];
+                bx=[hMainGui.Region(nRegion).X hMainGui.Region(nRegion).X(1)];
+                by=[hMainGui.Region(nRegion).Y hMainGui.Region(nRegion).Y(1)];
+                set(hMainGui.Plots.Region(nRegion),'XData',bx,'YData',by);
+            end
+        elseif strcmp(hMainGui.CursorMode,'RectRegion')==1
+            cp=round(cp);
+            set(hMainGui.fig,'pointer','crosshair');
+            if all(hMainGui.Values.CursorDownPos>0)
+                nRegion=length(hMainGui.Region);
+                hMainGui.Region(nRegion).X=[hMainGui.Values.CursorDownPos(1) cp(1) cp(1) hMainGui.Values.CursorDownPos(1)];
+                hMainGui.Region(nRegion).Y=[hMainGui.Values.CursorDownPos(2) hMainGui.Values.CursorDownPos(2) cp(2) cp(2)];
+                bx=[hMainGui.Region(nRegion).X hMainGui.Values.CursorDownPos(1)];
+                by=[hMainGui.Region(nRegion).Y hMainGui.Values.CursorDownPos(2)];
+                set(hMainGui.Plots.Region(nRegion),'XData',bx,'YData',by);
+            end
+        elseif strcmp(hMainGui.CursorMode,'Pan')==0&&strcmp(hMainGui.CursorMode,'Zoom')==0
+            set(hMainGui.fig,'pointer','crosshair')
+            if all(hMainGui.Values.CursorDownPos>0)
+                nMeasure=length(hMainGui.Measure);
+                if strcmp(hMainGui.CursorMode,'Line')==1||strcmp(hMainGui.CursorMode,'SegLine')==1
+                    bx=[hMainGui.Measure(nMeasure).X cp(1)];
+                    by=[hMainGui.Measure(nMeasure).Y cp(2)];
+                end
+                if strcmp(hMainGui.CursorMode,'LineScan')==1||strcmp(hMainGui.CursorMode,'SegLineScan')==1
+                    bx=[hMainGui.Scan.X cp(1)];
+                    by=[hMainGui.Scan.Y cp(2)];
+                end
+                if strcmp(hMainGui.CursorMode,'Freehand')==1
+                    if max((hMainGui.Measure(nMeasure).X==cp(1))+(hMainGui.Measure(nMeasure).Y==cp(2)))<2
+                        hMainGui.Measure(nMeasure).X=[hMainGui.Measure(nMeasure).X cp(1)];
+                        hMainGui.Measure(nMeasure).Y=[hMainGui.Measure(nMeasure).Y cp(2)];
+                    end
+                    bx=[hMainGui.Measure(nMeasure).X cp(1)];
+                    by=[hMainGui.Measure(nMeasure).Y cp(2)];
+                end
+                if strcmp(hMainGui.CursorMode,'FreehandScan')==1
+                    if max((hMainGui.Scan.X==cp(1))+(hMainGui.Scan.Y==cp(2)))<2
+                        hMainGui.Scan.X=[hMainGui.Scan.X cp(1)];
+                        hMainGui.Scan.Y=[hMainGui.Scan.Y cp(2)];
+                    end
+                    bx=[hMainGui.Scan.X cp(1)];
+                    by=[hMainGui.Scan.Y cp(2)];
+                end
+                if strcmp(hMainGui.CursorMode,'Rectangle')==1
+                    hMainGui.Measure(nMeasure).X=[hMainGui.Values.CursorDownPos(1) cp(1) cp(1) hMainGui.Values.CursorDownPos(1)];
+                    hMainGui.Measure(nMeasure).Y=[hMainGui.Values.CursorDownPos(2) hMainGui.Values.CursorDownPos(2) cp(2) cp(2)];
+                    bx=[hMainGui.Measure(nMeasure).X hMainGui.Values.CursorDownPos(1)];
+                    by=[hMainGui.Measure(nMeasure).Y hMainGui.Values.CursorDownPos(2)]; 
+                end
+                if strcmp(hMainGui.CursorMode,'Ellipse')==1
+                    t=0:.01:2*pi;
+                    bx=(hMainGui.Measure(nMeasure).X+cp(1))/2+abs(hMainGui.Measure(nMeasure).X-cp(1))/2*cos(t);
+                    by=(hMainGui.Measure(nMeasure).Y+cp(2))/2+abs(hMainGui.Measure(nMeasure).Y-cp(2))/2*sin(t);
+                end
+                if strcmp(hMainGui.CursorMode,'Polygon')==1
+                    bx=[hMainGui.Measure(nMeasure).X cp(1) hMainGui.Measure(nMeasure).X(1)];
+                    by=[hMainGui.Measure(nMeasure).Y cp(2) hMainGui.Measure(nMeasure).Y(1)];
+                end
+                if ~isempty(strfind(hMainGui.CursorMode,'Scan'))
+                    set(hMainGui.Plots.Scan,'XData',bx,'YData',by);
+                else
+                    set(hMainGui.Plots.Measure(nMeasure),'XData',bx,'YData',by);
+                end
             end
         end
     end
-end
-if ~isempty(strInfo)
-    p=length(strInfo);
-    if p>10
-        p=10;
-    end
-    TrackInfo.List=List;
-    TrackInfo.Mode=Mode;
-    n=List(1);
-    ct=1;
-    ct(Object(n).Selected==2)=2;
-    ct(Object(n).Selected==1)=3;
-    Selected=[Object.Selected];
-    o = [Object.PlotHandles];
-    if ~isempty(o)
-        set(o,'UIContextMenu',[]);
-    end
-    if all(Selected(List)<2)||strcmp(hMainGui.CurrentAxes,'Kymo')
-        if isempty(hMainGui.Plots.TrackInfo)
-            hMainGui.Plots.TrackInfo=text(cp(1)-dx,cp(2),strInfo(1:p),'Parent',hMainGui.CurrentAxesHandle,'BackgroundColor',[.7 .9 .7],'Tag','TrackInfo','UserData',TrackInfo);
-        else
-            try
-                set(hMainGui.Plots.TrackInfo,'String',strInfo(1:p),'Position',[cp(1)-dx,cp(2)],'UserData',TrackInfo);
-            catch
+    if ~isempty(strInfo)
+        p=length(strInfo);
+        if p>10
+            p=10;
+        end
+        TrackInfo.List=List;
+        TrackInfo.Mode=Mode;
+        n=List(1);
+        ct=1;
+        ct(Object(n).Selected==2)=2;
+        ct(Object(n).Selected==1)=3;
+        Selected=[Object.Selected];
+        o = [Object.PlotHandles];
+        if ~isempty(o)
+            set(o,'UIContextMenu',[]);
+        end
+        if all(Selected(List)<2)||strcmp(hMainGui.CurrentAxes,'Kymo')
+            if isempty(hMainGui.Plots.TrackInfo)
                 hMainGui.Plots.TrackInfo=text(cp(1)-dx,cp(2),strInfo(1:p),'Parent',hMainGui.CurrentAxesHandle,'BackgroundColor',[.7 .9 .7],'Tag','TrackInfo','UserData',TrackInfo);
+            else
+                try
+                    set(hMainGui.Plots.TrackInfo,'String',strInfo(1:p),'Position',[cp(1)-dx,cp(2)],'UserData',TrackInfo);
+                catch
+                    hMainGui.Plots.TrackInfo=text(cp(1)-dx,cp(2),strInfo(1:p),'Parent',hMainGui.CurrentAxesHandle,'BackgroundColor',[.7 .9 .7],'Tag','TrackInfo','UserData',TrackInfo);
+                end
+            end
+            if isempty(hMainGui.CurrentKey)
+                set(hMainGui.Plots.TrackInfo,'UIContextMenu',hMainGui.Menu.ctTrack(ct).menu);
+            else
+                set(hMainGui.Plots.TrackInfo,'UIContextMenu',[]);
+            end
+        else
+            k=find(Selected==2,1);
+            set(Object(k).PlotHandles(1),'UIContextMenu',hMainGui.Menu.ctTrack(2).menu,'UserData',TrackInfo);
+        end  
+    else
+        hMainGui=DeleteTrackInfo(hMainGui);
+    end
+    if strcmp(hMainGui.CursorMode,'Pan')
+        if all(hMainGui.Values.CursorDownPos>0)
+            if strcmp(hMainGui.PanAxis,'Kymo')
+                cp=cpKymo;    
+                a=hMainGui.MidPanel.aKymoGraph;        
+                Zoom=hMainGui.ZoomKymo;
+            elseif strcmp(hMainGui.PanAxis,'View')
+                cp=cpView;    
+                a=hMainGui.MidPanel.aView;        
+                Zoom=hMainGui.ZoomView;
+            end
+            xy=Zoom.currentXY;
+            xy{1}=xy{1}-(cp(1)-hMainGui.Values.CursorDownPos(1));
+            xy{2}=xy{2}-(cp(2)-hMainGui.Values.CursorDownPos(2));
+            if xy{1}(1)<Zoom.globalXY{1}(1)
+                xy{1}=xy{1}-xy{1}(1)+Zoom.globalXY{1}(1);
+            end
+            if xy{1}(2)>Zoom.globalXY{1}(2)
+                xy{1}=xy{1}-xy{1}(2)+Zoom.globalXY{1}(2);
+            end
+            if xy{2}(1)<Zoom.globalXY{2}(1)
+                xy{2}=xy{2}-xy{2}(1)+Zoom.globalXY{2}(1);
+            end
+            if xy{2}(2)>Zoom.globalXY{2}(2)
+                xy{2}=xy{2}-xy{2}(2)+Zoom.globalXY{2}(2);
+            end
+            set(a,{'xlim','ylim'},xy);
+            if strcmp(hMainGui.PanAxis,'Kymo')
+                 hMainGui.ZoomKymo.currentXY=xy;
+            elseif strcmp(hMainGui.PanAxis,'View')
+                 hMainGui.ZoomView.currentXY=xy;
+            end
+        else
+            if ~strcmp(hMainGui.CurrentAxes,'none') 
+                CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,1,1,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,1,1,NaN,1,2,2,1,1,1,NaN,NaN,NaN,NaN;NaN,NaN,1,2,2,1,1,2,2,1,2,2,1,NaN,NaN,NaN;NaN,NaN,1,2,2,1,1,2,2,1,2,2,1,NaN,1,NaN;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,1,2,1;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,2,2,1;NaN,1,1,NaN,1,2,2,2,2,2,2,2,1,2,2,1;1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1;1,2,2,2,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,1,2,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;];
+                set(hMainGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[10 9]);    
             end
         end
-        if isempty(hMainGui.CurrentKey)
-            set(hMainGui.Plots.TrackInfo,'UIContextMenu',hMainGui.Menu.ctTrack(ct).menu);
-        else
-            set(hMainGui.Plots.TrackInfo,'UIContextMenu',[]);
-        end
-    else
-        k=find(Selected==2,1);
-        set(Object(k).PlotHandles(1),'UIContextMenu',hMainGui.Menu.ctTrack(2).menu,'UserData',TrackInfo);
-    end  
-else
-    hMainGui=DeleteTrackInfo(hMainGui);
-end
-if strcmp(hMainGui.CursorMode,'Pan')
-    if all(hMainGui.Values.CursorDownPos>0)
-        if strcmp(hMainGui.PanAxis,'Kymo')
-            cp=cpKymo;    
-            a=hMainGui.MidPanel.aKymoGraph;        
-            Zoom=hMainGui.ZoomKymo;
-        elseif strcmp(hMainGui.PanAxis,'View')
-            cp=cpView;    
-            a=hMainGui.MidPanel.aView;        
-            Zoom=hMainGui.ZoomView;
-        end
-        xy=Zoom.currentXY;
-        xy{1}=xy{1}-(cp(1)-hMainGui.Values.CursorDownPos(1));
-        xy{2}=xy{2}-(cp(2)-hMainGui.Values.CursorDownPos(2));
-        if xy{1}(1)<Zoom.globalXY{1}(1)
-            xy{1}=xy{1}-xy{1}(1)+Zoom.globalXY{1}(1);
-        end
-        if xy{1}(2)>Zoom.globalXY{1}(2)
-            xy{1}=xy{1}-xy{1}(2)+Zoom.globalXY{1}(2);
-        end
-        if xy{2}(1)<Zoom.globalXY{2}(1)
-            xy{2}=xy{2}-xy{2}(1)+Zoom.globalXY{2}(1);
-        end
-        if xy{2}(2)>Zoom.globalXY{2}(2)
-            xy{2}=xy{2}-xy{2}(2)+Zoom.globalXY{2}(2);
-        end
-        set(a,{'xlim','ylim'},xy);
-        if strcmp(hMainGui.PanAxis,'Kymo')
-             hMainGui.ZoomKymo.currentXY=xy;
-        elseif strcmp(hMainGui.PanAxis,'View')
-             hMainGui.ZoomView.currentXY=xy;
-        end
-    else
-        if ~strcmp(hMainGui.CurrentAxes,'none') 
-            CData=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,1,1,NaN,NaN,NaN,NaN,NaN,NaN,NaN;NaN,NaN,NaN,1,1,NaN,1,2,2,1,1,1,NaN,NaN,NaN,NaN;NaN,NaN,1,2,2,1,1,2,2,1,2,2,1,NaN,NaN,NaN;NaN,NaN,1,2,2,1,1,2,2,1,2,2,1,NaN,1,NaN;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,1,2,1;NaN,NaN,NaN,1,2,2,1,2,2,1,2,2,1,2,2,1;NaN,1,1,NaN,1,2,2,2,2,2,2,2,1,2,2,1;1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1;1,2,2,2,1,2,2,2,2,2,2,2,2,2,1,NaN;NaN,1,2,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,2,1,NaN;NaN,NaN,1,2,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,1,2,2,2,2,2,2,2,2,2,1,NaN,NaN;NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;NaN,NaN,NaN,NaN,NaN,1,2,2,2,2,2,2,1,NaN,NaN,NaN;];
-            set(hMainGui.fig,'Pointer','custom','PointerShapeCData',CData,'PointerShapeHotSpot',[10 9]);    
-        end
     end
+    setappdata(0,'hMainGui',hMainGui);
+catch
 end
-setappdata(0,'hMainGui',hMainGui);
 
 function ButtonDown(hObject,eventdata) %#ok<INUSD>
 global Stack;

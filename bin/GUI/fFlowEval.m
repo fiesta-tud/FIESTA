@@ -1,6 +1,9 @@
 function fFlowEval(varargin)
 global Stack;
-if ~isempty(Stack) && nargin==0
+if isempty(Stack) && nargin==0
+    fMsgDlg('No Stack present!','error');
+    return;
+elseif ~isempty(Stack) && nargin==0
     hFlowEval.fig = figure('Units','normalized','DockControls','off','IntegerHandle','off','Name','FIESTA - Kymograph Evaluation','MenuBar','none',...
                          'NumberTitle','off','Position',[0.005 0.032 0.99 0.865],'HandleVisibility','callback',...
                          'Visible','on','NextPlot','add','WindowStyle','modal');
@@ -61,7 +64,7 @@ if ~isempty(Stack) && nargin==0
     PixMax = max(max(Stack{1}));
     mContrast = round(mean(m)+6*mean(s));
     Image = imadjust(Stack{1}(:,:,1),[double(PixMin(1))/2^16 double(mContrast)/2^16],[]);
-    hFlowEval.hImage = image(Image,'Parent',hFlowEval.aImage,'CDataMapping','scaled','EraseMode','normal');
+    hFlowEval.hImage = image(Image,'Parent',hFlowEval.aImage,'CDataMapping','scaled');
     set(hFlowEval.aImage,'CLim',[0 65535],'YDir','reverse','NextPlot','add','TickDir','in','Visible','off'); 
     set(hFlowEval.fig,'colormap',colormap('Gray'));
     daspect([1 1 1]); 

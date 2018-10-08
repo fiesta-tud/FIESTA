@@ -14,6 +14,10 @@ end
 function AlignFilament
 global Molecule
 global Filament
+if isempty(Filament)
+    fMsgDlg('No Filaments present!','error');
+    return;
+end
 nFil = length(Filament);
 [XPosFil,YPosFil,FrameFil,~]=InterpolFil(Filament);
 SwitchFil=zeros(1,nFil);
@@ -121,6 +125,11 @@ end
 
 function cObj = CountObjects(display)
 global Objects;
+if isempty(Objects)
+    cObj{1} = [];
+    fMsgDlg('No Objects present!','error');
+    return;
+end
 cObj=cell(1,2);
 hMainGui=getappdata(0,'hMainGui');
 nCh = getChIdx;
@@ -229,7 +238,7 @@ end
 function AverageFilament
 global Filament;
 Selected = [Filament.Selected];
-if max(Selected)==0
+if isempty(Filament) || max(Selected)==0
     fMsgDlg('No Filaments selected!','error');
     return;
 end
@@ -333,6 +342,7 @@ function DiffusionAnalysis
 global Molecule
 global Filament
 if isempty(Molecule) && isempty(Filament)
+    fMsgDlg('No Track selected!','error');
     return;
 end
 Selected = [ [Molecule.Selected] [Filament.Selected]];

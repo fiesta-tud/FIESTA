@@ -1588,6 +1588,7 @@ if length(answer)>1
     fitframes = fitframes(~k);
     if ~isempty(fitframes)
         params.dynamicfil = 0;
+        params.drift = {};
 %        params.transform = hMainGui.Values.TformChannel{Object.Channel};
         params.bead_model=Config.Model;
         params.max_beads_per_region=Config.MaxFunc;

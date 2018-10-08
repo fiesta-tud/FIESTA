@@ -867,6 +867,7 @@ if isfield(Config,'DynamicFil')
     end
 else
     Config.DynamicFil = 0;
+    addConfig.DynamicFil = 0;
 end
 if ~contains(get(gcbo,'Tag'),'Batch')
     if isempty(hMainGui.Values.PostSpecial)

@@ -37,7 +37,7 @@ DirBin = [DirRoot 'bin' filesep];
 
 %get online version of FIESTA
 link_fiestainfo{1} = 'https://cloudstore.zih.tu-dresden.de/index.php/s/QXWit4TjaHi30T4/download';
-link_fiestainfo{2} = 'http://bcube-dresden.de/fileadmin/www.bcube-dresden.de/uploads/diez/fiesta/fiestainfo.json';
+link_fiestainfo{2} = 'https://bcube-dresden.de/fileadmin/www.bcube-dresden.de/uploads/diez/fiesta/fiestainfo.json';
 link_fiestainfo{3} = 'http://bcube-dresden.de/fileadmin/www.bcube-dresden.de/uploads/diez/fiesta/fiestainfo.json';
 online_num = zeros(size(link_fiestainfo));
 online_str = '';
@@ -104,8 +104,9 @@ if isempty(version)&&isdeployed
                 copyfile('/Applications/Fiesta.app/Contents/AppData/*','~/Library/Fiesta/');    
             end
             try
-                fLoadConfig(file_id,'~/Library/Fiesta/fiesta.ini');
+                fLoadConfig('~/Library/Fiesta/');
             catch
+                warndlg({'Problem with loading the default Configuration','Replacing fiesta.ini with file in folder AppData','','If problems persist, manually replace fiesta.ini in folder:','~/Library/Fiesta/'},'Fiesta Warning');
                 rmdir('~/Library/Fiesta','s');
                 mkdir('~/Library/Fiesta');
                 copyfile('/Applications/Fiesta.app/Contents/AppData/*','~/Library/Fiesta/');  
@@ -125,8 +126,9 @@ if isempty(version)&&isdeployed
                 copyfile([DirCurrent 'AppData\*'],folder);    
             end
             try
-                fLoadConfig(file_id,[folder '\fiesta.ini']);
+                fLoadConfig(folder);
             catch
+                warndlg({'Problem with loading the default Configuration','Replacing fiesta.ini with file in folder AppData','','If problems persist, manually replace fiesta.ini in folder:',folder},'Fiesta Warning');
                 rmdir(folder,'s');
                 mkdir(folder);
                 copyfile([DirCurrent 'AppData\*'],folder);    
@@ -158,6 +160,12 @@ else
     if strcmp(DirRoot,DirCurrent)
         %add path to FIESTA functions
         addpath(genpath(DirBin));
+        try
+            fLoadConfig(DirCurrent);
+        catch
+            errordlg({'Problem with loading the default Configuration','Please replace fiesta.ini with file in folder documenation'},'Fiesta Error');
+            return;
+        end
     end
     
     % add dependency for compiler
