@@ -160,11 +160,13 @@ else
     if strcmp(DirRoot,DirCurrent)
         %add path to FIESTA functions
         addpath(genpath(DirBin));
-        try
-            fLoadConfig(DirCurrent);
-        catch
-            errordlg({'Problem with loading the default Configuration','Please replace fiesta.ini with file in folder documenation'},'Fiesta Error');
-            return;
+        if ~isdeployed
+            try
+                fLoadConfig(DirCurrent);
+            catch
+                errordlg({'Problem with loading the default Configuration','Please replace fiesta.ini with file in folder documenation'},'Fiesta Error');
+                return;
+            end
         end
     end
     
