@@ -200,7 +200,7 @@ end
 function ChooseFile(~,o)
 global FiestaDir;
 hOpenSpecial = getappdata(0,'hOpenSpecial');
-[FileName,PathName] = uigetfile({'*.stk;*.nd2;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack,'MultiSelect','on'); %open dialog for *.stk files
+[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack,'MultiSelect','on'); %open dialog for *.stk files
 if PathName~=0
     FiestaDir.Stack=PathName;
     n = str2double(get(o.Source,'Tag'));
@@ -229,14 +229,14 @@ if strcmp(output.Mode,'rSeparateFiles')
         end
     end
 elseif strcmp(output.Mode,'rSequentialSplitting')
-    [FileName,PathName] = uigetfile({'*.stk;*.nd2;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+    [FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack,'MultiSelect','on'); %open dialog for *.stk files
     if PathName~=0
         FiestaDir.Stack=PathName;
         output.Data = {FileName,PathName,get(hOpenSpecial.pSequential.mNumberChannels,'Value')+1,...
                    get(findobj('Parent',hOpenSpecial.pSequentialSplitting,'-and','Style','radiobutton'),'Value'),get(hOpenSpecial.pSequential.eCh,'String')};
     end
 else
-    [FileName,PathName] = uigetfile({'*.stk;*.nd2;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd2,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+    [FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack,'MultiSelect','on'); %open dialog for *.stk files
     if PathName~=0
         FiestaDir.Stack=PathName;
         output.Data = {FileName,PathName,get(findobj('Parent',hOpenSpecial.pSpatialSplitting,'-and','Style','radiobutton'),'Value')};
