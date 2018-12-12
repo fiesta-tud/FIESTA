@@ -1,121 +1,687 @@
-14:30:06  Analysing frame 1000
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1001
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1002
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1003
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1004
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1005
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1006
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1007
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1008
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1009
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
-14:30:06  Analysing frame 1010
-14:30:06  START SCANNING
-14:30:06  create black&white image
-14:30:06  scan area 1
-14:30:06  scan area 2
-14:30:06  2 objects found
-14:30:06  start fine scan
-14:30:06  fit remaining intermediate points
-14:30:06  process object 1 with 1 points
-14:30:06  process object 2 with 1 points
-14:30:06  interpolate data between points
+16:00:20  Analysing frame 1
+16:00:20  START SCANNING
+16:00:20  create black&white image
+16:00:20  scan area 1
+16:00:20  scan area 2
+16:00:20  scan area 3
+16:00:20  scan area 4
+16:00:20  scan area 5
+16:00:20  scan area 6
+16:00:20  scan area 7
+16:00:20  scan area 8
+16:00:20  scan area 9
+16:00:20  scan area 10
+16:00:20  scan area 11
+16:00:20  scan area 12
+16:00:20  scan area 13
+16:00:20  scan area 14
+16:00:20  scan area 15
+16:00:20  scan area 16
+16:00:20  scan area 17
+16:00:20  scan area 18
+16:00:20  scan area 19
+16:00:20  scan area 20
+16:00:20  scan area 21
+16:00:20  35 objects found
+16:00:20  start fine scan
+16:00:21  fit remaining intermediate points
+16:00:21  process object 1 with 1 points
+16:00:21  process object 2 with 1 points
+16:00:21  process object 3 with 1 points
+16:00:21  process object 4 with 1 points
+16:00:21  process object 5 with 1 points
+16:00:21  process object 6 with 1 points
+16:00:21  process object 7 with 1 points
+16:00:21  process object 8 with 1 points
+16:00:21  process object 9 with 1 points
+16:00:21  process object 10 with 1 points
+16:00:21  process object 11 with 1 points
+16:00:21  process object 12 with 1 points
+16:00:21  process object 13 with 1 points
+16:00:21  process object 14 with 1 points
+16:00:21  process object 15 with 1 points
+16:00:21  process object 16 with 1 points
+16:00:21  process object 17 with 1 points
+16:00:21  process object 18 with 1 points
+16:00:21  process object 19 with 1 points
+16:00:21  process object 20 with 1 points
+16:00:21  process object 21 with 1 points
+16:00:21  process object 22 with 1 points
+16:00:21  process object 23 with 1 points
+16:00:21  process object 24 with 1 points
+16:00:21  process object 25 with 1 points
+16:00:21  process object 26 with 1 points
+16:00:21  process object 27 with 1 points
+16:00:21  process object 28 with 1 points
+16:00:21  process object 29 with 1 points
+16:00:21  process object 30 with 1 points
+16:00:21  process object 31 with 1 points
+16:00:21  process object 32 with 1 points
+16:00:21  process object 33 with 1 points
+16:00:21  process object 34 with 1 points
+16:00:21  process object 35 with 1 points
+16:00:21  interpolate data between points
+16:00:21  Analysing frame 2
+16:00:21  START SCANNING
+16:00:21  create black&white image
+16:00:21  scan area 1
+16:00:21  scan area 2
+16:00:21  scan area 3
+16:00:21  scan area 4
+16:00:21  scan area 5
+16:00:21  scan area 6
+16:00:21  scan area 7
+16:00:21  scan area 8
+16:00:21  scan area 9
+16:00:21  scan area 10
+16:00:21  scan area 11
+16:00:21  scan area 12
+16:00:21  scan area 13
+16:00:21  scan area 14
+16:00:21  scan area 15
+16:00:21  scan area 16
+16:00:21  scan area 17
+16:00:21  scan area 18
+16:00:21  scan area 19
+16:00:21  scan area 20
+16:00:21  scan area 21
+16:00:21  scan area 22
+16:00:21  scan area 23
+16:00:21  41 objects found
+16:00:21  start fine scan
+16:00:23  fit remaining intermediate points
+16:00:23  process object 1 with 1 points
+16:00:23  process object 2 with 1 points
+16:00:23  process object 3 with 1 points
+16:00:23  process object 4 with 1 points
+16:00:23  process object 5 with 1 points
+16:00:23  process object 6 with 1 points
+16:00:23  process object 7 with 1 points
+16:00:23  process object 8 with 1 points
+16:00:23  process object 9 with 1 points
+16:00:23  process object 10 with 1 points
+16:00:23  process object 11 with 1 points
+16:00:23  process object 12 with 1 points
+16:00:23  process object 13 with 1 points
+16:00:23  process object 14 with 1 points
+16:00:23  process object 15 with 1 points
+16:00:23  process object 16 with 1 points
+16:00:23  process object 17 with 1 points
+16:00:23  process object 18 with 1 points
+16:00:23  process object 19 with 1 points
+16:00:23  process object 20 with 1 points
+16:00:23  process object 21 with 1 points
+16:00:23  process object 22 with 1 points
+16:00:23  process object 23 with 1 points
+16:00:23  process object 24 with 1 points
+16:00:23  process object 25 with 1 points
+16:00:23  process object 26 with 1 points
+16:00:23  process object 27 with 1 points
+16:00:23  process object 28 with 1 points
+16:00:23  process object 29 with 1 points
+16:00:23  process object 30 with 1 points
+16:00:23  process object 31 with 1 points
+16:00:23  process object 32 with 1 points
+16:00:23  process object 33 with 1 points
+16:00:23  process object 34 with 1 points
+16:00:23  process object 35 with 1 points
+16:00:23  process object 36 with 1 points
+16:00:23  process object 37 with 1 points
+16:00:23  process object 38 with 1 points
+16:00:23  process object 39 with 1 points
+16:00:23  process object 40 with 1 points
+16:00:23  process object 41 with 1 points
+16:00:23  interpolate data between points
+16:00:23  Analysing frame 3
+16:00:23  START SCANNING
+16:00:23  create black&white image
+16:00:23  scan area 1
+16:00:23  scan area 2
+16:00:23  scan area 3
+16:00:23  scan area 4
+16:00:23  scan area 5
+16:00:23  scan area 6
+16:00:23  scan area 7
+16:00:23  scan area 8
+16:00:23  scan area 9
+16:00:23  scan area 10
+16:00:23  scan area 11
+16:00:23  scan area 12
+16:00:23  scan area 13
+16:00:23  scan area 14
+16:00:23  scan area 15
+16:00:23  scan area 16
+16:00:23  scan area 17
+16:00:23  scan area 18
+16:00:23  scan area 19
+16:00:23  scan area 20
+16:00:23  scan area 21
+16:00:23  39 objects found
+16:00:23  start fine scan
+16:00:24  fit remaining intermediate points
+16:00:24  process object 1 with 1 points
+16:00:24  process object 2 with 1 points
+16:00:24  process object 3 with 1 points
+16:00:24  process object 4 with 1 points
+16:00:24  process object 5 with 1 points
+16:00:24  process object 6 with 1 points
+16:00:24  process object 7 with 1 points
+16:00:24  process object 8 with 1 points
+16:00:24  process object 9 with 1 points
+16:00:24  process object 10 with 1 points
+16:00:24  process object 11 with 1 points
+16:00:24  process object 12 with 1 points
+16:00:24  process object 13 with 1 points
+16:00:24  process object 14 with 1 points
+16:00:24  process object 15 with 1 points
+16:00:24  process object 16 with 1 points
+16:00:24  process object 17 with 1 points
+16:00:24  process object 18 with 1 points
+16:00:24  process object 19 with 1 points
+16:00:24  process object 20 with 1 points
+16:00:24  process object 21 with 1 points
+16:00:24  process object 22 with 1 points
+16:00:24  process object 23 with 1 points
+16:00:24  process object 24 with 1 points
+16:00:24  process object 25 with 1 points
+16:00:24  process object 26 with 1 points
+16:00:24  process object 27 with 1 points
+16:00:24  process object 28 with 1 points
+16:00:24  process object 29 with 1 points
+16:00:24  process object 30 with 1 points
+16:00:24  process object 31 with 1 points
+16:00:24  process object 32 with 1 points
+16:00:24  process object 33 with 1 points
+16:00:24  process object 34 with 1 points
+16:00:24  process object 35 with 1 points
+16:00:24  process object 36 with 1 points
+16:00:24  process object 37 with 1 points
+16:00:24  process object 38 with 1 points
+16:00:24  process object 39 with 1 points
+16:00:24  interpolate data between points
+16:00:24  Analysing frame 4
+16:00:24  START SCANNING
+16:00:24  create black&white image
+16:00:24  scan area 1
+16:00:24  scan area 2
+16:00:24  scan area 3
+16:00:24  scan area 4
+16:00:24  scan area 5
+16:00:24  scan area 6
+16:00:24  scan area 7
+16:00:24  scan area 8
+16:00:24  scan area 9
+16:00:24  scan area 10
+16:00:24  scan area 11
+16:00:24  scan area 12
+16:00:24  scan area 13
+16:00:24  scan area 14
+16:00:24  scan area 15
+16:00:24  scan area 16
+16:00:24  scan area 17
+16:00:24  scan area 18
+16:00:24  scan area 19
+16:00:24  scan area 20
+16:00:24  scan area 21
+16:00:24  scan area 22
+16:00:24  scan area 23
+16:00:24  scan area 24
+16:00:24  40 objects found
+16:00:24  start fine scan
+16:00:26  fit remaining intermediate points
+16:00:26  process object 1 with 1 points
+16:00:26  process object 2 with 1 points
+16:00:26  process object 3 with 1 points
+16:00:26  process object 4 with 1 points
+16:00:26  process object 5 with 1 points
+16:00:26  process object 6 with 1 points
+16:00:26  process object 7 with 1 points
+16:00:26  process object 8 with 1 points
+16:00:26  process object 9 with 1 points
+16:00:26  process object 10 with 1 points
+16:00:26  process object 11 with 1 points
+16:00:26  process object 12 with 1 points
+16:00:26  process object 13 with 1 points
+16:00:26  process object 14 with 1 points
+16:00:26  process object 15 with 1 points
+16:00:26  process object 16 with 1 points
+16:00:26  process object 17 with 1 points
+16:00:26  process object 18 with 1 points
+16:00:26  process object 19 with 1 points
+16:00:26  process object 20 with 1 points
+16:00:26  process object 21 with 1 points
+16:00:26  process object 22 with 1 points
+16:00:26  process object 23 with 1 points
+16:00:26  process object 24 with 1 points
+16:00:26  process object 25 with 1 points
+16:00:26  process object 26 with 1 points
+16:00:26  process object 27 with 1 points
+16:00:26  process object 28 with 1 points
+16:00:26  process object 29 with 1 points
+16:00:26  process object 30 with 1 points
+16:00:26  process object 31 with 1 points
+16:00:26  process object 32 with 1 points
+16:00:26  process object 33 with 1 points
+16:00:26  process object 34 with 1 points
+16:00:26  process object 35 with 1 points
+16:00:26  process object 36 with 1 points
+16:00:26  process object 37 with 1 points
+16:00:26  process object 38 with 1 points
+16:00:26  process object 39 with 1 points
+16:00:26  process object 40 with 1 points
+16:00:26  interpolate data between points
+16:00:26  Analysing frame 5
+16:00:26  START SCANNING
+16:00:26  create black&white image
+16:00:26  scan area 1
+16:00:26  scan area 2
+16:00:26  scan area 3
+16:00:26  scan area 4
+16:00:26  scan area 5
+16:00:26  scan area 6
+16:00:26  scan area 7
+16:00:26  scan area 8
+16:00:26  scan area 9
+16:00:26  scan area 10
+16:00:26  scan area 11
+16:00:26  scan area 12
+16:00:26  scan area 13
+16:00:26  scan area 14
+16:00:26  scan area 15
+16:00:26  scan area 16
+16:00:26  scan area 17
+16:00:26  scan area 18
+16:00:26  scan area 19
+16:00:26  scan area 20
+16:00:26  scan area 21
+16:00:26  scan area 22
+16:00:26  scan area 23
+16:00:26  scan area 24
+16:00:26  scan area 25
+16:00:26  40 objects found
+16:00:26  start fine scan
+16:00:28  fit remaining intermediate points
+16:00:28  process object 1 with 1 points
+16:00:28  process object 2 with 1 points
+16:00:28  process object 3 with 1 points
+16:00:28  process object 4 with 1 points
+16:00:28  process object 5 with 1 points
+16:00:28  process object 6 with 1 points
+16:00:28  process object 7 with 1 points
+16:00:28  process object 8 with 1 points
+16:00:28  process object 9 with 1 points
+16:00:28  process object 10 with 1 points
+16:00:28  process object 11 with 1 points
+16:00:28  process object 12 with 1 points
+16:00:28  process object 13 with 1 points
+16:00:28  process object 14 with 1 points
+16:00:28  process object 15 with 1 points
+16:00:28  process object 16 with 1 points
+16:00:28  process object 17 with 1 points
+16:00:28  process object 18 with 1 points
+16:00:28  process object 19 with 1 points
+16:00:28  process object 20 with 1 points
+16:00:28  process object 21 with 1 points
+16:00:28  process object 22 with 1 points
+16:00:28  process object 23 with 1 points
+16:00:28  process object 24 with 1 points
+16:00:28  process object 25 with 1 points
+16:00:28  process object 26 with 1 points
+16:00:28  process object 27 with 1 points
+16:00:28  process object 28 with 1 points
+16:00:28  process object 29 with 1 points
+16:00:28  process object 30 with 1 points
+16:00:28  process object 31 with 1 points
+16:00:28  process object 32 with 1 points
+16:00:28  process object 33 with 1 points
+16:00:28  process object 34 with 1 points
+16:00:28  process object 35 with 1 points
+16:00:28  process object 36 with 1 points
+16:00:28  process object 37 with 1 points
+16:00:28  process object 38 with 1 points
+16:00:28  process object 39 with 1 points
+16:00:28  process object 40 with 1 points
+16:00:28  interpolate data between points
+16:00:28  Analysing frame 6
+16:00:28  START SCANNING
+16:00:28  create black&white image
+16:00:28  scan area 1
+16:00:28  scan area 2
+16:00:28  scan area 3
+16:00:28  scan area 4
+16:00:28  scan area 5
+16:00:28  scan area 6
+16:00:28  scan area 7
+16:00:28  scan area 8
+16:00:28  scan area 9
+16:00:28  scan area 10
+16:00:28  scan area 11
+16:00:28  scan area 12
+16:00:28  scan area 13
+16:00:28  scan area 14
+16:00:28  scan area 15
+16:00:28  scan area 16
+16:00:28  scan area 17
+16:00:28  scan area 18
+16:00:28  scan area 19
+16:00:28  scan area 20
+16:00:28  scan area 21
+16:00:28  scan area 22
+16:00:28  scan area 23
+16:00:28  scan area 24
+16:00:28  scan area 25
+16:00:28  42 objects found
+16:00:28  start fine scan
+16:00:29  fit remaining intermediate points
+16:00:29  process object 1 with 1 points
+16:00:29  process object 2 with 1 points
+16:00:29  process object 3 with 1 points
+16:00:29  process object 4 with 1 points
+16:00:29  process object 5 with 1 points
+16:00:29  process object 6 with 1 points
+16:00:29  process object 7 with 1 points
+16:00:29  process object 8 with 1 points
+16:00:29  process object 9 with 1 points
+16:00:29  process object 10 with 1 points
+16:00:29  process object 11 with 1 points
+16:00:29  process object 12 with 1 points
+16:00:29  process object 13 with 1 points
+16:00:29  process object 14 with 1 points
+16:00:29  process object 15 with 1 points
+16:00:29  process object 16 with 1 points
+16:00:29  process object 17 with 1 points
+16:00:29  process object 18 with 1 points
+16:00:29  process object 19 with 1 points
+16:00:29  process object 20 with 1 points
+16:00:29  process object 21 with 1 points
+16:00:29  process object 22 with 1 points
+16:00:29  process object 23 with 1 points
+16:00:29  process object 24 with 1 points
+16:00:29  process object 25 with 1 points
+16:00:29  process object 26 with 1 points
+16:00:29  process object 27 with 1 points
+16:00:29  process object 28 with 1 points
+16:00:29  process object 29 with 1 points
+16:00:29  process object 30 with 1 points
+16:00:29  process object 31 with 1 points
+16:00:29  process object 32 with 1 points
+16:00:29  process object 33 with 1 points
+16:00:29  process object 34 with 1 points
+16:00:29  process object 35 with 1 points
+16:00:29  process object 36 with 1 points
+16:00:30  process object 37 with 1 points
+16:00:30  process object 38 with 1 points
+16:00:30  process object 39 with 1 points
+16:00:30  process object 40 with 1 points
+16:00:30  process object 41 with 1 points
+16:00:30  process object 42 with 1 points
+16:00:30  interpolate data between points
+16:00:30  Analysing frame 7
+16:00:30  START SCANNING
+16:00:30  create black&white image
+16:00:30  scan area 1
+16:00:30  scan area 2
+16:00:30  scan area 3
+16:00:30  scan area 4
+16:00:30  scan area 5
+16:00:30  scan area 6
+16:00:30  scan area 7
+16:00:30  scan area 8
+16:00:30  scan area 9
+16:00:30  scan area 10
+16:00:30  scan area 11
+16:00:30  scan area 12
+16:00:30  scan area 13
+16:00:30  scan area 14
+16:00:30  scan area 15
+16:00:30  scan area 16
+16:00:30  scan area 17
+16:00:30  scan area 18
+16:00:30  scan area 19
+16:00:30  scan area 20
+16:00:30  scan area 21
+16:00:30  scan area 22
+16:00:30  scan area 23
+16:00:30  scan area 24
+16:00:30  scan area 25
+16:00:30  scan area 26
+16:00:30  40 objects found
+16:00:30  start fine scan
+16:00:31  fit remaining intermediate points
+16:00:31  process object 1 with 1 points
+16:00:31  process object 2 with 1 points
+16:00:31  process object 3 with 1 points
+16:00:31  process object 4 with 1 points
+16:00:31  process object 5 with 1 points
+16:00:31  process object 6 with 1 points
+16:00:31  process object 7 with 1 points
+16:00:31  process object 8 with 1 points
+16:00:31  process object 9 with 1 points
+16:00:31  process object 10 with 1 points
+16:00:31  process object 11 with 1 points
+16:00:31  process object 12 with 1 points
+16:00:31  process object 13 with 1 points
+16:00:31  process object 14 with 1 points
+16:00:31  process object 15 with 1 points
+16:00:31  process object 16 with 1 points
+16:00:31  process object 17 with 1 points
+16:00:31  process object 18 with 1 points
+16:00:31  process object 19 with 1 points
+16:00:31  process object 20 with 1 points
+16:00:31  process object 21 with 1 points
+16:00:31  process object 22 with 1 points
+16:00:31  process object 23 with 1 points
+16:00:31  process object 24 with 1 points
+16:00:31  process object 25 with 1 points
+16:00:31  process object 26 with 1 points
+16:00:31  process object 27 with 1 points
+16:00:31  process object 28 with 1 points
+16:00:31  process object 29 with 1 points
+16:00:31  process object 30 with 1 points
+16:00:31  process object 31 with 1 points
+16:00:31  process object 32 with 1 points
+16:00:31  process object 33 with 1 points
+16:00:31  process object 34 with 1 points
+16:00:31  process object 35 with 1 points
+16:00:31  process object 36 with 1 points
+16:00:31  process object 37 with 1 points
+16:00:31  process object 38 with 1 points
+16:00:31  process object 39 with 1 points
+16:00:31  process object 40 with 1 points
+16:00:31  interpolate data between points
+16:00:31  Analysing frame 8
+16:00:31  START SCANNING
+16:00:31  create black&white image
+16:00:31  scan area 1
+16:00:31  scan area 2
+16:00:31  scan area 3
+16:00:31  scan area 4
+16:00:31  scan area 5
+16:00:31  scan area 6
+16:00:31  scan area 7
+16:00:31  scan area 8
+16:00:31  scan area 9
+16:00:31  scan area 10
+16:00:31  scan area 11
+16:00:31  scan area 12
+16:00:31  scan area 13
+16:00:31  scan area 14
+16:00:31  scan area 15
+16:00:31  scan area 16
+16:00:31  scan area 17
+16:00:31  scan area 18
+16:00:31  scan area 19
+16:00:31  scan area 20
+16:00:31  scan area 21
+16:00:31  scan area 22
+16:00:31  scan area 23
+16:00:31  scan area 24
+16:00:31  scan area 25
+16:00:31  scan area 26
+16:00:31  scan area 27
+16:00:31  scan area 28
+16:00:31  scan area 29
+16:00:31  38 objects found
+16:00:31  start fine scan
+16:00:32  fit remaining intermediate points
+16:00:32  process object 1 with 1 points
+16:00:32  process object 2 with 1 points
+16:00:32  process object 3 with 1 points
+16:00:32  process object 4 with 1 points
+16:00:32  process object 5 with 1 points
+16:00:32  process object 6 with 1 points
+16:00:32  process object 7 with 1 points
+16:00:32  process object 8 with 1 points
+16:00:32  process object 9 with 1 points
+16:00:32  process object 10 with 1 points
+16:00:32  process object 11 with 1 points
+16:00:32  process object 12 with 1 points
+16:00:32  process object 13 with 1 points
+16:00:32  process object 14 with 1 points
+16:00:32  process object 15 with 1 points
+16:00:32  process object 16 with 1 points
+16:00:32  process object 17 with 1 points
+16:00:32  process object 18 with 1 points
+16:00:32  process object 19 with 1 points
+16:00:32  process object 20 with 1 points
+16:00:32  process object 21 with 1 points
+16:00:32  process object 22 with 1 points
+16:00:32  process object 23 with 1 points
+16:00:32  process object 24 with 1 points
+16:00:32  process object 25 with 1 points
+16:00:32  process object 26 with 1 points
+16:00:32  process object 27 with 1 points
+16:00:32  process object 28 with 1 points
+16:00:32  process object 29 with 1 points
+16:00:32  process object 30 with 1 points
+16:00:32  process object 31 with 1 points
+16:00:32  process object 32 with 1 points
+16:00:32  process object 33 with 1 points
+16:00:32  process object 34 with 1 points
+16:00:32  process object 35 with 1 points
+16:00:32  process object 36 with 1 points
+16:00:32  process object 37 with 1 points
+16:00:32  process object 38 with 1 points
+16:00:32  interpolate data between points
+16:00:33  Analysing frame 9
+16:00:33  START SCANNING
+16:00:33  create black&white image
+16:00:33  scan area 1
+16:00:33  scan area 2
+16:00:33  scan area 3
+16:00:33  scan area 4
+16:00:33  scan area 5
+16:00:33  scan area 6
+16:00:33  scan area 7
+16:00:33  scan area 8
+16:00:33  scan area 9
+16:00:33  scan area 10
+16:00:33  scan area 11
+16:00:33  scan area 12
+16:00:33  scan area 13
+16:00:33  scan area 14
+16:00:33  scan area 15
+16:00:33  scan area 16
+16:00:33  scan area 17
+16:00:33  scan area 18
+16:00:33  scan area 19
+16:00:33  scan area 20
+16:00:33  scan area 21
+16:00:33  scan area 22
+16:00:33  scan area 23
+16:00:33  scan area 24
+16:00:33  33 objects found
+16:00:33  start fine scan
+16:00:33  fit remaining intermediate points
+16:00:33  process object 1 with 1 points
+16:00:33  process object 2 with 1 points
+16:00:33  process object 3 with 1 points
+16:00:33  process object 4 with 1 points
+16:00:33  process object 5 with 1 points
+16:00:33  process object 6 with 1 points
+16:00:33  process object 7 with 1 points
+16:00:33  process object 8 with 1 points
+16:00:33  process object 9 with 1 points
+16:00:33  process object 10 with 1 points
+16:00:33  process object 11 with 1 points
+16:00:33  process object 12 with 1 points
+16:00:33  process object 13 with 1 points
+16:00:33  process object 14 with 1 points
+16:00:33  process object 15 with 1 points
+16:00:33  process object 16 with 1 points
+16:00:33  process object 17 with 1 points
+16:00:33  process object 18 with 1 points
+16:00:33  process object 19 with 1 points
+16:00:33  process object 20 with 1 points
+16:00:33  process object 21 with 1 points
+16:00:33  process object 22 with 1 points
+16:00:33  process object 23 with 1 points
+16:00:33  process object 24 with 1 points
+16:00:33  process object 25 with 1 points
+16:00:33  process object 26 with 1 points
+16:00:33  process object 27 with 1 points
+16:00:33  process object 28 with 1 points
+16:00:33  process object 29 with 1 points
+16:00:33  process object 30 with 1 points
+16:00:33  process object 31 with 1 points
+16:00:33  process object 32 with 1 points
+16:00:33  process object 33 with 1 points
+16:00:33  interpolate data between points
+16:00:33  Analysing frame 10
+16:00:33  START SCANNING
+16:00:33  create black&white image
+16:00:33  scan area 1
+16:00:33  scan area 2
+16:00:33  scan area 3
+16:00:33  scan area 4
+16:00:33  scan area 5
+16:00:33  scan area 6
+16:00:33  scan area 7
+16:00:33  scan area 8
+16:00:33  scan area 9
+16:00:33  scan area 10
+16:00:33  scan area 11
+16:00:33  scan area 12
+16:00:33  scan area 13
+16:00:33  scan area 14
+16:00:33  scan area 15
+16:00:33  scan area 16
+16:00:33  scan area 17
+16:00:33  scan area 18
+16:00:33  scan area 19
+16:00:33  32 objects found
+16:00:33  start fine scan
+16:00:34  fit remaining intermediate points
+16:00:34  process object 1 with 1 points
+16:00:34  process object 2 with 1 points
+16:00:34  process object 3 with 1 points
+16:00:34  process object 4 with 1 points
+16:00:34  process object 5 with 1 points
+16:00:34  process object 6 with 1 points
+16:00:34  process object 7 with 1 points
+16:00:34  process object 8 with 1 points
+16:00:34  process object 9 with 1 points
+16:00:34  process object 10 with 1 points
+16:00:34  process object 11 with 1 points
+16:00:34  process object 12 with 1 points
+16:00:34  process object 13 with 1 points
+16:00:34  process object 14 with 1 points
+16:00:34  process object 15 with 1 points
+16:00:34  process object 16 with 1 points
+16:00:34  process object 17 with 1 points
+16:00:34  process object 18 with 1 points
+16:00:34  process object 19 with 1 points
+16:00:34  process object 20 with 1 points
+16:00:34  process object 21 with 1 points
+16:00:34  process object 22 with 1 points
+16:00:34  process object 23 with 1 points
+16:00:34  process object 24 with 1 points
+16:00:34  process object 25 with 1 points
+16:00:34  process object 26 with 1 points
+16:00:34  process object 27 with 1 points
+16:00:34  process object 28 with 1 points
+16:00:34  process object 29 with 1 points
+16:00:34  process object 30 with 1 points
+16:00:34  process object 31 with 1 points
+16:00:34  process object 32 with 1 points
+16:00:34  interpolate data between points

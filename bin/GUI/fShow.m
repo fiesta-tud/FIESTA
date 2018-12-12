@@ -91,9 +91,12 @@ if ~isempty(Stack)
                 c = get(hMainGui.ToolBar.ToolColors(hMainGui.Values.StackColor(n)),'CData');
                 c = squeeze(c(1,1,1:3));
                 Image(:,:,n) = (Image(:,:,n)-hMainGui.Values.ScaleMin(n))/(hMainGui.Values.ScaleMax(n)-hMainGui.Values.ScaleMin(n)+1);
-                IRGB(:,:,1) = IRGB(:,:,1)+Image(:,:,n)*c(1);
-                IRGB(:,:,2) = IRGB(:,:,2)+Image(:,:,n)*c(2);
-                IRGB(:,:,3) = IRGB(:,:,3)+Image(:,:,n)*c(3);
+                Ichannel = Image(:,:,n);
+                Ichannel(Ichannel<0) = 0;
+                Ichannel(Ichannel>1) = 1;
+                IRGB(:,:,1) = IRGB(:,:,1)+Ichannel*c(1);
+                IRGB(:,:,2) = IRGB(:,:,2)+Ichannel*c(2);
+                IRGB(:,:,3) = IRGB(:,:,3)+Ichannel*c(3);
             end
             Image = IRGB;
         end

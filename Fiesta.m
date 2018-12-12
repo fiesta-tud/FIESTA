@@ -38,7 +38,7 @@ DirBin = [DirRoot 'bin' filesep];
 %get online version of FIESTA
 link_fiestainfo{1} = 'https://cloudstore.zih.tu-dresden.de/index.php/s/QXWit4TjaHi30T4/download';
 link_fiestainfo{2} = 'https://bcube-dresden.de/fileadmin/www.bcube-dresden.de/uploads/diez/fiesta/fiestainfo.json';
-link_fiestainfo{3} = 'http://bcube-dresden.de/fileadmin/www.bcube-dresden.de/uploads/diez/fiesta/fiestainfo.json';
+link_fiestainfo{3} = 'https://wwwpub.zih.tu-dresden.de/~fiesta/fiestainfo.json';
 online_num = zeros(size(link_fiestainfo));
 online_str = '';
 opt = weboptions('ContentType','json');
