@@ -44,7 +44,7 @@ global FiestaDir;
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Stack...','Visible','on');
 set(hMainGui.MidPanel.pView,'Visible','off');
-[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
 if PathName~=0
     PixSize = [];
     if strcmpi(FileName(end-3:end),'.stk')
@@ -55,6 +55,8 @@ if PathName~=0
         filetype = 'ND2';
     elseif strcmpi(FileName(end-3:end),'.zvi')
         filetype = 'ZVI';
+    elseif strcmpi(FileName(end-2:end),'.dv')
+        filetype = 'DV';
     else
         filetype = 'TIFF';
     end
@@ -65,7 +67,7 @@ if PathName~=0
     FiestaDir.Stack=PathName;
     f=[PathName FileName];
     try
-        if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')
+        if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')||strcmp(filetype,'DV')
             [Stack,TimeInfo,PixSize]=fReadND2(f); 
         else
             [Stack,TimeInfo,PixSize]=fStackRead(f);
@@ -183,10 +185,14 @@ if ~isempty(fOpenStruct)
             nFrames(n) = size(Stack{n},3);
             if strcmpi(FileName(end-3:end),'.stk')
                 filetype{n} = 'MetaMorph';
+            elseif strcmpi(FileName(end-3:end),'.nd')
+                filetype{n} = 'ND';
             elseif strcmpi(FileName(end-3:end),'.nd2')
                 filetype{n} = 'ND2';
             elseif strcmpi(FileName(end-3:end),'.zvi')
                 filetype{n} = 'ZVI';
+            elseif strcmpi(FileName(end-2:end),'.dv')
+                filetype{n} = 'DV';
             else
                 filetype{n} = 'TIFF'; 
             end
@@ -235,10 +241,23 @@ if ~isempty(fOpenStruct)
         end
         FileName = fOpenStruct.Data{1};
         PathName = fOpenStruct.Data{2};
+        if strcmpi(FileName(end-3:end),'.stk')
+            filetype{1} = 'MetaMorph';
+        elseif strcmpi(FileName(end-2:end),'.nd')
+            filetype{1} = 'ND';
+        elseif strcmpi(FileName(end-3:end),'.nd2')
+            filetype{1} = 'ND2';
+        elseif strcmpi(FileName(end-3:end),'.zvi')
+            filetype{1} = 'ZVI';
+        elseif strcmpi(FileName(end-2:end),'.dv')
+            filetype{1} = 'DV';
+        else
+            filetype{1} = 'TIFF';
+        end
         options.Block = block;
         options.Region = region;
         try
-            if strcmpi(FileName(end-3:end),'.nd2')
+            if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')||strcmp(filetype,'DV')
                 [Stack,TimeInfo,PixSize]=fReadND2([PathName FileName],options);
             else
                 [Stack,TimeInfo,PixSize]=fStackRead([PathName FileName],options);
@@ -257,18 +276,6 @@ if ~isempty(fOpenStruct)
             Config.Directory{1}=PathName;
             Config.StackName{1}=FileName;
             Config.StackReadOptions = options;
-            if strcmpi(FileName(end-3:end),'.stk')
-                filetype{1} = 'MetaMorph';             
-            elseif strcmpi(FileName(end-3:end),'.nd2')
-                filetype{1} = 'ND2';               
-            else
-                if any(nFrames>1)
-                    Config.Time(1:nChannels) = str2double(fInputDlg('Enter plane time difference in ms:','100'));
-                else
-                    Config.Time(1:nChannels) = 0;
-                end
-                filetype{1} = 'TIFF'; 
-            end
             for n = 1:nChannels
                 nFrames(n) = size(Stack{n},3);
                 if nFrames == 1
