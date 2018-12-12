@@ -124,38 +124,85 @@ fShared('ReturnFocus');
 function ExportScan(hMainGui)
 global Stack;
 global Config;
-[FileName, PathName, FilterIndex] = uiputfile({'*.jpg','JPG-File (*.jpg)';'*.txt','TXT-File (*.txt)'},fShared('GetSaveDir'));
+[FileName, PathName, FilterIndex] = uiputfile({'*.mat','MAT-File (*.mat)';'*.txt','TXT-File (*.txt)';'*.jpg','JPG-File (*.jpg)'},'Save FIESTA LineScan',fShared('GetSaveDir'));
 if PathName~=0
     fShared('SetSaveDir',PathName);
     set(hMainGui.fig,'Pointer','watch');   
-    if FilterIndex==1
+    if FilterIndex==3
         if isempty(strfind(FileName,'.jpg'))
             file=sprintf('%s/%s.jpg',PathName,FileName);
         else
             file=sprintf('%s/%s',PathName,FileName);
         end
-    end
-    if FilterIndex==2
+    elseif FilterIndex==1
+        if isempty(strfind(FileName,'.mat'))
+            file=sprintf('%s/%s.mat',PathName,FileName);
+        else
+            file=sprintf('%s/%s',PathName,FileName);
+        end
+    elseif FilterIndex==2
         if isempty(strfind(FileName,'.txt'))
             file=sprintf('%s/%s.txt',PathName,FileName);
         else
             file=sprintf('%s/%s',PathName,FileName);
         end
     end
-    if hMainGui.Values.FrameIdx<1
-        f=round(get(hMainGui.MidPanel.sFrame,'Value'));
+    stidx=hMainGui.Values.FrameIdx(1);
+    if length(hMainGui.Values.FrameIdx)>2
+        idx=hMainGui.Values.FrameIdx(stidx+1);
     else
-        f=hMainGui.Values.FrameIdx;
+        idx=hMainGui.Values.FrameIdx(2);
     end
-    Z = interp2(double(Stack{f}),hMainGui.Scan.InterpX,hMainGui.Scan.InterpY);
-    I = mean(Z,1);
-    D = hMainGui.Scan.InterpD;
-    if FilterIndex==1
+    if all(isreal(idx)) && all(idx)>0
+        if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
+            Image=double(Stack{stidx}(:,:,idx));
+        else
+            for n = 1:length(hMainGui.Values.StackColor)
+                t = min([n+1 length(hMainGui.Values.FrameIdx)]);
+                idx(n) = hMainGui.Values.FrameIdx(t);
+                Image(:,:,n)=double(Stack{n}(:,:,idx(n)));
+            end
+        end   
+    else
+        cidx = imag(idx);
+        switch(cidx)
+            case {-1,-4} %Maximum or objects profection
+                Image = double(getappdata(hMainGui.fig,'MaxImage'));
+                if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
+                    Image = Image(:,:,stidx);
+                end
+            case -2 %Average
+                Image=double(getappdata(hMainGui.fig,'AverageImage'));
+                if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
+                    Image = Image(:,:,stidx);
+                end
+            otherwise
+                idx = real(idx);
+                Image = double(Stack{stidx}(:,:,idx));
+        end
+    end
+    for n = 1:size(Image,3)
+        Z = interp2(double(Image(:,:,n)),hMainGui.Scan.InterpX,hMainGui.Scan.InterpY);
+        I(n,:) = mean(Z,1);
+    end
+    if FilterIndex==3
         h=figure('PaperUnits','centimeter','Visible','off','PaperType','A4','PaperPositionMode','manual','PaperPosition',[0 0 29.7 21]);
+        if size(I,1)>1
+            for n = 1:size(I,1)
+                c = get(hMainGui.ToolBar.ToolColors(hMainGui.Values.StackColor(n)),'CData');
+                c = squeeze(c(1,1,1:3));
+                line(hMainGui.Scan.InterpD*hMainGui.Values.PixSize/1000,I(n,:),'Color',c,'LineStyle','-');
+            end
+        else
+            line(hMainGui.Scan.InterpD*hMainGui.Values.PixSize/1000,I,'Color','black','LineStyle','-');
+        end
         plot(D,I,'b-');
         xlabel('Intensity vs. Distance in um');
         print(h,file,'-djpeg','-r600');
         close(h);
+    elseif FilterIndex==1
+        LineScan = [hMainGui.Scan.InterpD*hMainGui.Values.PixSize/1000 I'];
+        save(file,'LineScan');
     elseif FilterIndex==2
         fh=fopen(file,'w');
         fprintf(fh,'%s - Frame: %d\n',Config.StackName,f);
