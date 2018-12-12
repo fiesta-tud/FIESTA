@@ -164,7 +164,9 @@ hExportViewGui.tBarSize = uicontrol('Parent',hExportViewGui.fig,'Units','normali
 
 BarSize=x_total*0.2*PixSize/1000;
 
-if BarSize>5
+if BarSize>25
+   BarSize=round(BarSize/10)*10;
+elseif BarSize>5
    BarSize=round(BarSize/5)*5;
 elseif BarSize>0.5
    BarSize=ceil(BarSize);
@@ -677,7 +679,9 @@ xy = hExportViewGui.currentXY;
 x_total = xy{1}(2)-xy{1}(1);
 if value <= 0 || value > x_total * 0.5 * PixSize / 1000
     value = x_total*0.2*PixSize/1000;
-    if value>5
+    if value>25
+        value = round(value/10)*10;
+    elseif value>5
         value = round(value/5)*5;
     else
         value = ceil(value);
@@ -993,7 +997,7 @@ XRes=str2double(get(hExportViewGui.eXRes,'String'));
 YRes=str2double(get(hExportViewGui.eYRes,'String'));            
 R=max([XRes YRes]);
 if get(hExportViewGui.rCurrentView,'Value')
-    [FileName,PathName,FilterIndex] = uiputfile({'*.tif','TIFF-File (*.tif)';'*.jpg','JPEG-File (*.jpg)'},'Export Image',fShared('GetSaveDir'));
+    [FileName,PathName,FilterIndex] = uiputfile({'*.jpg','JPEG-File (*.jpg)';'*.tif','TIFF-File (*.tif)'},'Export Image',fShared('GetSaveDir'));
     if FileName~=0
         fShared('SetSaveDir',PathName);
         fShow('Image');
@@ -1008,12 +1012,12 @@ if get(hExportViewGui.rCurrentView,'Value')
         end
         I = imresize(I, [YRes XRes], 'bilinear');
         file = [PathName FileName];
-        if FilterIndex==2
+        if FilterIndex==1
             if isempty(findstr('.jpg',FileName))
                 file = [file '.jpg'];
             end
             imwrite(I,file,'Quality',100);
-        elseif FilterIndex==1
+        elseif FilterIndex==2
             if isempty(findstr('.tif',FileName))
                 file = [file '.tif'];
             end
