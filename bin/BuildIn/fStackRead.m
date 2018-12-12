@@ -134,7 +134,7 @@ end
 PixelSize = [];
 if ~isempty(uic) %if file is MetaMorph stack
     MetaInfo=ReadUIC(file,uic);
-    if isfield(MetaInfo,'CreationTime');
+    if isfield(MetaInfo,'CreationTime')
         N = length(MetaInfo.CreationTime);
     else
         N = 1;
@@ -177,9 +177,11 @@ else %if file is multilayer TIFF
                 MetaInfo.CreationTime(str2double(idx)) = str2double(t(2:end))*1000;
             end
             k = strfind(metaInfo,'dCalibration=');
-            str = strtok(metaInfo(k(1):end),',');
-            [~,r] = strtok(str,'=');
-            PixelSize = str2double(r(2:end))*1000;
+            if ~isempty(k)
+                str = strtok(metaInfo(k(1):end),',');
+                [~,r] = strtok(str,'=');
+                PixelSize = str2double(r(2:end))*1000;
+            end
         else
             k = strfind(metaInfo,'Timestamp'); % zvi to tif files  in FIJI?
             if ~isempty(k)
