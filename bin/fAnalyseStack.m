@@ -222,16 +222,18 @@ if ~isempty(Objects)
         pMol=1;
         pFil=1;
         for n = 1:length(Objects)
-            lObjects = Objects{n}.length(1,:);
-            for m=1:length(lObjects)
-                if lObjects(m)==0
-                    MolTrack{pMol}(1)=n;
-                    MolTrack{pMol}(2)=m;
-                    pMol=pMol+1;    
-                else
-                    FilTrack{pFil}(1)=n;
-                    FilTrack{pFil}(2)=m;
-                    pFil=pFil+1;            
+            if ~isempty(Objects{n})
+                lObjects = Objects{n}.length(1,:);
+                for m=1:length(lObjects)
+                    if lObjects(m)==0
+                        MolTrack{pMol}(1)=n;
+                        MolTrack{pMol}(2)=m;
+                        pMol=pMol+1;    
+                    else
+                        FilTrack{pFil}(1)=n;
+                        FilTrack{pFil}(2)=m;
+                        pFil=pFil+1;            
+                    end
                 end
             end
         end

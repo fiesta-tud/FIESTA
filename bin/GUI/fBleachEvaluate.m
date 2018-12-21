@@ -143,7 +143,7 @@ for n=1:length(I)
         kymo(:,n) = round(mean(pic,2));
     end
 end
-plot(hBleachEvaluate.aPlot,(TimeInfo{1}-TimeInfo{1}(1))/1000,I,'-*b');
+plot(hBleachEvaluate.aPlot,(TimeInfo{1}-TimeInfo{1}(1))/1000,I,'-*b','Tag','hBleachEvaluateCurve');
 set(hBleachEvaluate.aPlot,'XLim',[0 (TimeInfo{1}(end)-TimeInfo{1}(1))/1000]);
 legend(['X=' num2str(X) ', Y=' num2str(Y)],'AutoUpdate','off');
 imshow(kymo,[min(min(kymo)) max(max(kymo))],'Parent',hBleachEvaluate.aVerify);
