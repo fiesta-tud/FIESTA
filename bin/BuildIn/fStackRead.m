@@ -164,6 +164,26 @@ else %if file is multilayer TIFF
             end
             MetaInfo.CreationTime(i)=hours*3600000+str2double(tiffinfo(i).DateTime(13:14))*60000+str2double(tiffinfo(i).DateTime(16:17))*1000+milisec;
         end
+    elseif any([tiffinfo(1).UnknownTags.ID]==51123)
+        % Micromanager specific Metadata are stored in Tiff-Tag 51123
+        % Timestamp from Camera (only new ones, more precise) 
+        % or MM timestamp (less precise, necessary for old cameras)
+        for i=1:N
+            k = find([tiffinfo(i).UnknownTags.ID]==51123);
+            jinfo = jsondecode(tiffinfo(i).UnknownTags(k).Value);
+            try
+                % In case of hardware timestamp form iXon Ultras,
+                % use the HW timestamp due to higher precision
+                % MM2.0gamma: jinfo.UserData.Andor_ElapsedTime_ms_HW_.scalar
+                time = str2num(jinfo.UserData.Andor_ElapsedTime_ms_HW_.scalar);
+            catch
+                % in case no HW timestamp is existing
+                % use software timestamp from MM
+                time = jinfo.ElapsedTime_ms;
+            end
+            MetaInfo.CreationTime(i) = time;
+        end
+        PixelSize = jinfo.PixelSizeUm*1000;
     else
         reader = bfGetReader(source);
         meta = reader.getGlobalMetadata();
