@@ -1,5 +1,5 @@
 Fluorescence Image Evaluation Software for Tracking and Analysis 1.6.0
-Copyright (C) 2019 Felix Ruhnow
+Copyright (C) 2022 Felix Ruhnow
 
 Welcome to FIESTA, a Fluoresecent Image Evaluation Software for Tracking
 and Analysis developed in MatLab. The program is able to detect both 
