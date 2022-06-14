@@ -384,6 +384,7 @@ if nMol>0
             dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
             parallelprogressdlg('String',['Calculating transformations for channel ' num2str(m)],'Max',max(nData),'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
             parfor (frame = 1:max(nData),Config.NumCores)   
+                T = struct('T',[]);
                 nXY = zeros(numel(Mol),2);
                 for n = 1:numel(Mol)
                     R_Index=Mol(n).Results(:,1);
@@ -472,6 +473,10 @@ set(hMainGui.Menu.mAnalyseFrame,'Enable',enable);
 set(hMainGui.Menu.mFrame,'Enable',enable);
 set(hMainGui.Menu.mMaximum,'Enable',enable);
 set(hMainGui.Menu.mAverage,'Enable',enable);
+set(hMainGui.Menu.mCreateDynamicFilStacks,'Enable',enable);
+set(hMainGui.Menu.mCropStack,'Enable',enable);
+set(hMainGui.Menu.mMoveAverage,'Enable',enable);
+set(hMainGui.Menu.mEstimateCorrections,'Enable',enable);
 if isempty(Drift) || strcmp(get(hMainGui.Menu.mCorrectStack,'Checked'),'on')
     set(hMainGui.Menu.mApplyCorrections,'Enable','off','Checked','off');
     set(hMainGui.Menu.mShowCorrections,'Enable','off','Checked','off');
@@ -753,7 +758,7 @@ else
         Config.LastFrame = size(Stack,2);
     end
    
-    params.options = optimset( 'Display', 'off','UseParallel','never');
+    params.options = optimset( 'Display', 'off');
     params.options.MaxFunEvals = []; 
     params.options.MaxIter = [];
     params.options.TolFun = [];
@@ -884,7 +889,7 @@ if ~contains(get(gcbo,'Tag'),'Batch')
     Time = Config.Time;
     RelThresh = hMainGui.Values.RelThresh;
 else
-    [FileName, PathName] = uigetfile({'*.stk','FIESTA Data(*.stk)';'*.tif','Multilayer TIFF-Files (*.tif)'},'Select multiple stacks for analysis',FiestaDir.Stack,'MultiSelect','on');
+    [FileName, PathName] = uigetfile({'*.stk;*.tif','FIESTA Data(*.stk)';'*.tif','Multilayer TIFF-Files (*.tif)'},'Select multiple stacks for analysis',FiestaDir.Stack,'MultiSelect','on');
     if ~iscell(FileName)
         FileName = {FileName};
     end   
@@ -1044,7 +1049,7 @@ try
                 end
                 if ~isempty(Queue(1).Time) && ~isnan(Queue(1).Time) && Queue(1).Time>0
                     for n = 1:length(aStack)
-                        nFrames=size(aStack,3);
+                        nFrames=size(aStack{n},3);
                         aTimeInfo{n}=(0:nFrames-1)*Queue(1).Time;
                     end
                 end

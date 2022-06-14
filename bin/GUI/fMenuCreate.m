@@ -162,8 +162,20 @@ hMenu.mZProjection = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',
 hMenu.mObjProjection = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''View'',getappdata(0,''hMainGui''),-4);','Enable','off',...
                             'Label','Objects projection','Tag','mObjProjection');     
                         
+hMenu.mCreateDynamicFilStacks = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''CreateDynamicFilStack'');','Enable','off',...
+                            'Label','Create Stacks for dynamic filament analysis','Tag','mCreateDynamicFilStacks','Separator','on');
+                        
+hMenu.mCropStack = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''CropStack'');','Enable','off',...
+                            'Label','Crop Stack (last Region)','Tag','mCropStack','Separator','off');
+
+hMenu.mMoveAverage = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''MoveAverage'');','Enable','off',...
+                            'Label','Apply moving average','Tag','mMoveAverage','Separator','off');
+                        
+hMenu.mEstimateCorrections = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''EstimateCorrections'');','Enable','off',...
+                            'Label','Estimate corrections from image intensity','Tag','mEstimateCorrections','Separator','on','Checked', 'off');
+                        
 hMenu.mApplyCorrections = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''ApplyCorrections'');','Enable','off',...
-                            'Label','Apply corrections to stack','Tag','mApplyCorrections','Separator','on','Checked', 'off');
+                            'Label','Apply corrections to stack','Tag','mApplyCorrections','Separator','off','Checked', 'off');
                         
 hMenu.mShowCorrections = uimenu('Parent',hMenu.mView,'Callback','fMenuView(''ShowCorrections'');','Enable','off',...
                             'Label','Show corrections','Tag','mShowCorrections','Checked', 'off');    
@@ -282,6 +294,9 @@ hMenu.mBleachEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fBleachEvaluate
                 
 hMenu.mFlowEvaluate = uimenu('Parent',hMenu.mStats,'Callback','fFlowEval;',...
                              'Label','Flow Evaluation','Tag','mFlowEvaluate');
+                         
+hMenu.mFrapAnalysis = uimenu('Parent',hMenu.mStats,'Callback','fMenuStatistics(''FrapAnalysis'');',...
+                             'Label','FRAP Analysis','Tag','mFrapAnalysis');
                         
 %create Help menu
 

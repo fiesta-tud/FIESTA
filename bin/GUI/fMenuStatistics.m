@@ -9,6 +9,30 @@ switch func
         cObj = CountObjects(varargin{1});
     case 'AlignFilament'
         AlignFilament;
+    case 'FrapAnalysis'
+        FrapAnalysis;
+end
+
+function FrapAnalysis
+global Stack;
+hMainGui=getappdata(0,'hMainGui');
+nFrame = str2double(fInputDlg('Maximum frame index:',num2str(size(Stack{1},3))));
+for m = 1:numel(Stack)
+    nFrame = min([nFrame size(Stack{m},3)]);
+    for n = 1:nFrame
+        I = double(Stack{m}(:,:,n));
+        recovery(n,m) = mean(I(hMainGui.Region(1).Area==1));
+        bleaching(n,m) = mean(I(hMainGui.Region(2).Area==1));
+    end
+end
+[FileName, PathName] = uiputfile({'*.mat','MAT-files (*.mat)'},'Save FRAP results',fShared('GetSaveDir'));
+if FileName~=0
+    file = [PathName FileName];
+    if isempty(findstr('.mat',file))
+        file = [file '.mat'];
+    end
+    fShared('SetSaveDir',PathName);
+    save(file,'recovery','bleaching');
 end
 
 function AlignFilament

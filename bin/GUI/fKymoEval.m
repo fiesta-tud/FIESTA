@@ -55,13 +55,15 @@ elseif ~isempty(Stack) && nargin==0
     mode = fQuestDlg({'How do you like to select lines for the Kymograph creation?',...
                     'Maximum Projection - Displays the maximum projection',...
                     'Average Projection - Displays the average projection',...
+                    'SD Projection - Displays the standard deviation projection',...
                     'Filament Image - Displays an image of the filaments ',...
                     'Filament Positions - Uses the tracked filament positions (Objects)'},...
                     'FIESTA - Kymograph Evaluation',...
-                    {'Maximum Projection','Average Projection','Filament Image','Filament Positions'},'Maximum Projection');
+                    {'Maximum Projection','Average Projection','SD Projection','Filament Image','Filament Positions'},'Maximum Projection');
     if isempty(mode)
         return;
     end
+    stidx=hMainGui.Values.FrameIdx(1);
     maxImage = getappdata(hMainGui.fig,'MaxImage');
     averageImage = getappdata(hMainGui.fig,'AverageImage');
     if strcmp(mode,'Filament Image')
@@ -73,9 +75,11 @@ elseif ~isempty(Stack) && nargin==0
         [I,~,~]=fStackRead([filpath filfile]);
         hKymoEval.ref = I{1};
     elseif strcmp(mode,'Average Projection')
-        hKymoEval.ref = averageImage(:,:,1);
+        hKymoEval.ref = averageImage(:,:,stidx); 
+    elseif strcmp(mode,'SD Projection')
+        hKymoEval.ref = std(double(Stack{stidx}),0,3);
     else
-        hKymoEval.ref = maxImage(:,:,1);
+        hKymoEval.ref = maxImage(:,:,stidx);
     end
     hKymoEval.Line = [];
     hKymoEval.cp = [];
@@ -85,7 +89,7 @@ elseif ~isempty(Stack) && nargin==0
         Image = imadjust(uint16(hKymoEval.ref),[double(min(min(hKymoEval.ref)))/2^16 max([double(min(min(hKymoEval.ref))+1)/2^16 double(mContrast)/2^16])],[]);
         hKymoEval.hImage = image(Image,'Parent',hKymoEval.aImage,'CDataMapping','scaled');
         set(hKymoEval.aImage,'CLim',[0 2^16],'YDir','reverse','NextPlot','add','TickDir','in','Visible','off'); 
-        set(hKymoEval.fig,'colormap',colormap('Gray'));
+        set(hKymoEval.fig,'colormap',colormap('Gray'));   
         daspect([1 1 1]);
         line([0.5 0.5],[0.5 1],'Color','k'); 
         PixMin = min(min(hKymoEval.ref));
@@ -233,10 +237,11 @@ end
 function hKymoEval = Measure(hKymoEval)
 global TimeInfo;
 hMainGui = getappdata(0,'hMainGui');
+stidx=hMainGui.Values.FrameIdx(1);
 PixSize = hMainGui.Values.PixSize*hKymoEval.KymoPix(hKymoEval.CurrentKymo);
 X = hKymoEval.Line{end}(:,1);
 Y = hKymoEval.Line{end}(:,2);
-T = (TimeInfo{1}(Y)-TimeInfo{1}(Y(1)))*sign(TimeInfo{1}(Y(end))-TimeInfo{1}(Y(1)))/1000;
+T = (TimeInfo{stidx}(Y)-TimeInfo{stidx}(Y(1)))*sign(TimeInfo{stidx}(Y(end))-TimeInfo{stidx}(Y(1)))/1000;
 D = (X-X(1))*PixSize*sign(X(end)-X(1))/1000;
 if length(T) == 2
     V=D(2)/T(2);
@@ -296,7 +301,7 @@ if length(X)>1
     idx=H<median(H)-2*std(H);
     X(idx)=[];
     Y(idx)=[];
-    T = (TimeInfo{1}(Y)-TimeInfo{1}(Y(1)))*sign(TimeInfo{1}(Y(end))-TimeInfo{1}(Y(1)))/1000;
+    T = (TimeInfo{stidx}(Y)-TimeInfo{stidx}(Y(1)))*sign(TimeInfo{stidx}(Y(end))-TimeInfo{stidx}(Y(1)))/1000;
     D = (X-X(1))*PixSize*sign(X(end)-X(1))/1000;
     if length(T) == 2
         V=D(2)/T(2);
@@ -469,6 +474,8 @@ end
 
 function [KymoGraph,KymoPix] = NewKymo(nX,nY,ScanSize)
 global Stack;
+hMainGui = getappdata(0,'hMainGui');
+stidx=hMainGui.Values.FrameIdx(1);
 d=[0; cumsum(sqrt((nX(2:end)-nX(1:end-1)).^2 + (nY(2:end)-nY(1:end-1)).^2))];
 dt=max(d)/round(max(d));
 id=(0:round(max(d)))'*dt;
@@ -514,9 +521,9 @@ for i=1:length(X)
 end
 d = sqrt((X(2:end)-X(1:end-1)).^2 + (Y(2:end)-Y(1:end-1)).^2);
 KymoPix = mean(d);
-KymoGraph = zeros(size(Stack{1},3),scan_length);           
-for i = 1:size(Stack{1},3)
-    Z = interp2(double(Stack{1}(:,:,i)),iX,iY);
+KymoGraph = zeros(size(Stack{stidx},3),scan_length);           
+for i = 1:size(Stack{stidx},3)
+    Z = interp2(double(Stack{stidx}(:,:,i)),iX,iY);
     KymoGraph(i,:)=max(Z,[],1);
 end
 

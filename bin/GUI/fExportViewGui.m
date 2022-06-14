@@ -265,7 +265,7 @@ hExportViewGui.tCompression = uicontrol('Parent',hExportViewGui.pMovie,'Units','
                                     'String','Compression:','Style','text','Tag','tPosBar','HorizontalAlignment','left','BackgroundColor',c);                                      
                                 
 hExportViewGui.mCompression = uicontrol('Parent',hExportViewGui.pMovie,'Units','normalized','Position',[0.375 0.70 0.5 0.2],'Enable','off','FontSize',10,...
-                                    'String',{'Uncompressed AVI','Motion JPEG AVI'},'Value',2,'Style','popupmenu','Tag','mPosBar',...
+                                    'String',{'Uncompressed','Motion JPEG/H.264'},'Value',2,'Style','popupmenu','Tag','mPosBar',...
                                     'BackgroundColor','white','Callback','fExportViewGui(''UpdateMoviePanel'',getappdata(0,''hExportViewGui''));');         
                               
 hExportViewGui.tFPS = uicontrol('Parent',hExportViewGui.pMovie,'Units','normalized','Position',[0.05 0.38 0.2 0.22],'Enable','off','FontSize',10,...
@@ -1026,12 +1026,18 @@ if get(hExportViewGui.rCurrentView,'Value')
         close(hExportViewGui.fig);
     end
 else
-    [FileName,PathName] = uiputfile({'*.avi','AVI-File (*.avi)'},'Export Movie',fShared('GetSaveDir'));
+    [FileName,PathName,FilterIndex] = uiputfile({'*.avi','AVI-File (*.avi)';'*.mp4','MPEG-File (*.mp4)'},'Export Movie',fShared('GetSaveDir'));
     if FileName~=0
         fShared('SetSaveDir',PathName);
         file = [PathName FileName];
-        if isempty(findstr('.avi',FileName))
-            file = [file '.avi'];
+        if FilterIndex == 1
+            if isempty(findstr('.avi',FileName))
+                file = [file '.avi'];
+            end
+        else
+            if isempty(findstr('.mp4',FileName))
+                file = [file '.mp4'];
+            end
         end
         if get(hExportViewGui.rWholeStack,'Value')
             first=1;
@@ -1060,11 +1066,21 @@ else
             end
             p=1;
             progressdlg('String','Exporting Stack to Movie','Min',0,'Max',last,'Parent',hMainGui.fig,'windowstyle','modal');
-            if get(hExportViewGui.mCompression,'Value')==1
-                vidObj = VideoWriter(file,'Uncompressed AVI'); 
-            else    
-                vidObj = VideoWriter(file,'Motion JPEG AVI'); 
-                vidObj.Quality = get(hExportViewGui.sQuality,'Value');
+            if FilterIndex==1
+                
+                if get(hExportViewGui.mCompression,'Value')==1
+                    vidObj = VideoWriter(file,'Uncompressed AVI'); 
+                else    
+                    vidObj = VideoWriter(file,'Motion JPEG AVI'); 
+                    vidObj.Quality = get(hExportViewGui.sQuality,'Value');
+                end
+            else
+                vidObj = VideoWriter(file,'MPEG-4'); 
+                if get(hExportViewGui.mCompression,'Value')==1
+                    vidObj.Quality = 100;
+                else
+                    vidObj.Quality = get(hExportViewGui.sQuality,'Value');    
+                end
             end
             vidObj.FrameRate = fps;
             open(vidObj);

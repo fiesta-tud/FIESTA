@@ -44,7 +44,7 @@ global FiestaDir;
 set(hMainGui.MidPanel.pNoData,'Visible','on')
 set(hMainGui.MidPanel.tNoData,'String','Loading Stack...','Visible','on');
 set(hMainGui.MidPanel.pView,'Visible','off');
-[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
+[FileName,PathName] = uigetfile({'*.stk;*.nd;*.nd2;*.dv;*.zvi;*.tif;*.tiff;*.sld;*.czi','Image Stacks (*.stk,*.nd,*.nd2,*.dv,*.zvi,*.tif,*.tiff,*.sld,*.czi)'},'Select the Stack',FiestaDir.Stack); %open dialog for *.stk files
 if PathName~=0
     PixSize = [];
     if strcmpi(FileName(end-3:end),'.stk')
@@ -57,6 +57,10 @@ if PathName~=0
         filetype = 'ZVI';
     elseif strcmpi(FileName(end-2:end),'.dv')
         filetype = 'DV';
+    elseif strcmpi(FileName(end-3:end),'.sld')
+        filetype = 'SLD';
+    elseif strcmpi(FileName(end-3:end),'.czi')
+        filetype = 'CZI';
     else
         filetype = 'TIFF';
     end
@@ -67,8 +71,9 @@ if PathName~=0
     FiestaDir.Stack=PathName;
     f=[PathName FileName];
     try
-        if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')||strcmp(filetype,'DV')
-            [Stack,TimeInfo,PixSize]=fReadND2(f); 
+        if strcmp(filetype,'ND')||strcmp(filetype,'ND2')||strcmp(filetype,'ZVI')||strcmp(filetype,'DV')||strcmp(filetype,'SLD')||strcmp(filetype,'CZI')
+            [Stack,TimeInfo,PixSize]=fReadBioFormats(f); 
+          %  [Stack,TimeInfo,PixSize]=fReadND2(f); 
         else
             [Stack,TimeInfo,PixSize]=fStackRead(f);
         end
@@ -76,7 +81,7 @@ if PathName~=0
         fMsgDlg(ME.message,'error');
         failed=1;
     end
-    if isempty(TimeInfo{1}) || length(unique(TimeInfo{1}))<length(TimeInfo{1})  
+    if isempty(TimeInfo{1}) || length(unique(TimeInfo{1}))<length(TimeInfo{1}) || any(isnan(TimeInfo{1}))
         Time = str2double(fInputDlg('No creation time  - Enter plane time difference in ms:','100'));    
         nFrames=size(Stack{1},3);
         if ~isnan(Time)
@@ -150,9 +155,26 @@ if ~isempty(fOpenStruct)
         for n = 1:nChannels
             FileName = fOpenStruct.Data{n,1};
             PathName = fOpenStruct.Data{n,2};
+            if strcmpi(FileName(end-3:end),'.stk')
+                filetype{n} = 'MetaMorph';
+            elseif strcmpi(FileName(end-2:end),'.nd')
+                filetype{n} = 'ND';
+            elseif strcmpi(FileName(end-3:end),'.nd2')
+                filetype{n} = 'ND2';
+            elseif strcmpi(FileName(end-3:end),'.zvi')
+                filetype{n} = 'ZVI';
+            elseif strcmpi(FileName(end-2:end),'.dv')
+                filetype{n} = 'DV';
+            elseif strcmpi(FileName(end-3:end),'.sld')
+                filetype{n} = 'SLD';
+            elseif strcmpi(FileName(end-3:end),'.czi')
+                filetype{n} = 'CZI';
+            else
+                filetype{n} = 'TIFF';
+            end
             try
-                if strcmpi(FileName(end-3:end),'.nd2')
-                    [Stack(n),TimeInfo(n),PixSize]=fReadND2([PathName FileName]);
+                if strcmp(filetype{n},'ND')||strcmp(filetype{n},'ND2')||strcmp(filetype{n},'ZVI')||strcmp(filetype{n},'DV')||strcmp(filetype{n},'SLD')||strcmp(filetype{n},'CZI')
+                    [Stack(n),TimeInfo(n),PixSize]=fReadBioFormats([PathName FileName]);
                 else
                     [Stack(n),TimeInfo(n),PixSize]=fStackRead([PathName FileName]);
                 end
@@ -183,19 +205,6 @@ if ~isempty(fOpenStruct)
                Config.Time(n) = -round(mean(TimeInfo{n}(2:end)-TimeInfo{n}(1:end-1)),2);
             end
             nFrames(n) = size(Stack{n},3);
-            if strcmpi(FileName(end-3:end),'.stk')
-                filetype{n} = 'MetaMorph';
-            elseif strcmpi(FileName(end-3:end),'.nd')
-                filetype{n} = 'ND';
-            elseif strcmpi(FileName(end-3:end),'.nd2')
-                filetype{n} = 'ND2';
-            elseif strcmpi(FileName(end-3:end),'.zvi')
-                filetype{n} = 'ZVI';
-            elseif strcmpi(FileName(end-2:end),'.dv')
-                filetype{n} = 'DV';
-            else
-                filetype{n} = 'TIFF'; 
-            end
             TformChannel{n} = [1 0 0; 0 1 0; 0 0 n];
         end
     else
@@ -381,6 +390,17 @@ if FileName~=0
     nFrames = zeros(size(Stack));
     for n = 1:length(Stack)
         nFrames(n) = size(Stack{n},3);
+        if isempty(TimeInfo{n}) || length(unique(TimeInfo{n}))<length(TimeInfo{n}) 
+            Config.Time(n) = str2double(fInputDlg('No creation time  - Enter plane time difference in ms:','100'));  
+            if ~isnan(Config.Time(n))
+                TimeInfo{n}=(0:nFrames-1)*Config.Time(n);
+            else
+                Config.Time(n) = 0;
+                TimeInfo{n}=(0:nFrames-1);
+            end
+        else
+           Config.Time(n) = -round(mean(TimeInfo{n}(2:end)-TimeInfo{n}(1:end-1)),2);
+        end
     end 
     if all(nFrames==nFrames(1))
         hMainGui.Values.FrameIdx = ones(1,2); 
@@ -394,6 +414,7 @@ if FileName~=0
     Config.StackName={FileName};
     Config.Directory={PathName};
     hMainGui.Values.PixSize=Config.PixSize;
+    Config.StackReadOptions = [];
     hMainGui.Values.PostSpecial = [];
     set(hMainGui.Menu.mApplyCorrections,'Checked','off');
     set(hMainGui.Menu.mShowCorrections,'Checked','off'); 

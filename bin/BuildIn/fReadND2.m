@@ -16,7 +16,7 @@ if ~isempty(hMainGui)
     progressdlg('Title','FIESTA','String','Reading Stack Information...','Parent',hMainGui.fig);    
 end
 
-reader = bfGetReader(source);
+reader = bfGetReader(source,0);
 
 %extract the planes and the metadata from the cell array
 Meta = reader.getMetadataStore();

@@ -204,7 +204,9 @@ function objects = FindPointObjects( region_stats, params )
     maximas( maximas(:,3) < 0, : ) = [];
     
     % take the brigthes maximas
-    num_maximas = min( size(maximas,1), params.max_beads_per_region );
+    %num_maximas = min( size(maximas,1), params.max_beads_per_region );
+    
+    num_maximas = size(maximas,1);
     objects = repmat( struct( 'p', EMPTY_POINT ), 1, num_maximas ); % preallocate
     for i = 1 : num_maximas
       objects(i).p(1).x = maximas(i,1:2) + region_stats.BoundingBox(1:2) - 0.5;

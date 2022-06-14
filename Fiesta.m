@@ -180,10 +180,10 @@ else
     end
     
     % finally start the application
-    try
+   % try
         fMainGui('Create');
-    catch ME
-        errordlg(getReport(ME, 'extended','hyperlinks','off'),'FIESTA Error','modal');
-        return
-    end
+    %catch ME
+    %    errordlg(getReport(ME, 'extended','hyperlinks','off'),'FIESTA Error','modal');
+    %    return
+    %end
 end

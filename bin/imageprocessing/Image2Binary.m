@@ -27,7 +27,11 @@ function output = Image2Binary( input, params )
         Isort = sort( input(:) );
         z = numel(input);
         med = Isort(round(z/2));
-        sqr = 0.7413*(Isort(round(3*z/4))-Isort(round(z/4)));
+        if med-Isort(round(z/4))>10
+            sqr = 2*0.7413*(Isort(round(z/2))-Isort(round(z/4)));
+        else
+            sqr = std(Isort(~isoutlier(Isort)));
+        end
         threshold = round(med+imag(threshold)/100*sqr);
     end
   else

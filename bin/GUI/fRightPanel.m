@@ -62,8 +62,10 @@ switch func
         ApplyCorrections(varargin{1});
     case 'DeleteQueue'
         DeleteQueue(varargin{1});
-    case 'ExportMeasure'
-        ExportMeasure(varargin{1});        
+    case 'SaveMeasure'
+        SaveMeasure(varargin{1});        
+    case 'KeepMeasure'
+        KeepMeasure;    
     case 'ExportScan'
         ExportScan(varargin{1});           
     case 'ExportKymo'
@@ -217,51 +219,66 @@ if PathName~=0
 end        
 fShared('ReturnFocus');
 
-function ExportMeasure(hMainGui)
-[FileName, PathName] = uiputfile({'*.txt','TXT-File (*.txt)'},'Save FIESTA Measurements',fShared('GetSaveDir'));
+function KeepMeasure
+hMainGui = getappdata(0,'hMainGui');
+Data = [hMainGui.Measure.Data];
+Data = reshape(Data,4,size(Data,2)/4)';
+hMainGui.Measurements = [hMainGui.Measurements; Data];
+for n = numel(hMainGui.Measure):-1:1
+    hMainGui.Measure(n) = [];
+    delete(hMainGui.Plots.Measure(n));
+    hMainGui.Plots.Measure(n) = [];
+end
+setappdata(0,'hMainGui',hMainGui);
+UpdateMeasure(hMainGui);
+
+function SaveMeasure(hMainGui)
+[FileName, PathName, FilterIndex] = uiputfile({'*.mat','MAT-File (*.mat)';'*.txt','TXT-File (*.txt)'},'Save FIESTA Measurements',fShared('GetSaveDir'));
 if FileName~=0
-    fShared('SetSaveDir',PathName);
-    file = [PathName FileName];    
-    if isempty(findstr('.txt',file))
-        file = [file '.txt'];
-    end       
-    str{1}='';
-    if get(hMainGui.RightPanel.pTools.cLengthArea,'Value')==1
-        str{1}=sprintf(['%sLength/Area [' char(956) 'm/' char(956) 'm' char(178) ']\t'],str{1});
-    end
-    if get(hMainGui.RightPanel.pTools.cIntegral,'Value')==1
-        str{1}=sprintf('%sIntegral\t',str{1});
-    end
-    if get(hMainGui.RightPanel.pTools.cMean,'Value')==1
-        str{1}=sprintf('%sMean\t',str{1});
-    end
-    if get(hMainGui.RightPanel.pTools.cSTD,'Value')==1
-        str{1}=sprintf('%sSTD\t',str{1});
-    end
-    for i=1:length(hMainGui.Measure)
-        str{i+1}=''; %#ok<AGROW>
-        if get(hMainGui.RightPanel.pTools.cLengthArea,'Value')==1
-            str{i+1}=sprintf('%s%f\t',str{i+1},hMainGui.Measure(i).LenArea); %#ok<AGROW>
+    file = [PathName FileName];
+    if FilterIndex == 1
+        if ~contains(file,'.mat')
+            file = [file '.mat'];
+        end  
+    else
+        if ~contains(file,'.txt')
+            file = [file '.txt'];
         end
-        if get(hMainGui.RightPanel.pTools.cIntegral,'Value')==1
-            if hMainGui.Measure(i).Dim==1
-                str{i+1}=sprintf('%s%f\t',str{i+1},hMainGui.Measure(i).Integral); %#ok<AGROW>
+    end
+    fShared('SetSaveDir',PathName);
+    Data = hMainGui.Measurements;
+    k = Data(:,1)./Data(:,2) ~= Data(:,4);
+    if any(k)
+        StackMeasurements = array2table(Data(k,:),'VariableNames',{'LengthArea','Mean','Integral','STD'});
+        StackMeasurements.Properties.VariableUnits = {'µm/µm^2','','',''};
+        if FilterIndex == 1
+            save(file,'StackMeasurements');
+        else
+           writetable(StackMeasurements,file);
+        end
+    end
+    k = Data(:,1)./Data(:,2) == Data(:,4);
+    if any(k)
+        KymoMeasurements = array2table(Data(k,:),'VariableNames',{'Distance','Time','Frames','Velocity'});
+        KymoMeasurements.Properties.VariableUnits = {'µm','s','','µm/s'};
+        if FilterIndex == 1
+            if isfile(file)                   
+                save(file,'KymoMeasurements','-append');
             else
-                str{i+1}=sprintf('%s%f\t',str{i+1},hMainGui.Measure(i).Integral); %#ok<AGROW>
+                save(file,'KymoMeasurements');
+            end
+        else
+            if isfile(file)
+                try
+                    writetable(KymoMeasurements,file,'WriteMode','Append');
+                catch
+                    writetable(KymoMeasurements,strrep(file,'.txt.','-kymo.txt'));
+                end
+            else
+                writetable(KymoMeasurements,file);
             end
         end
-        if get(hMainGui.RightPanel.pTools.cMean,'Value')==1
-            str{i+1}=sprintf('%s%f\t',str{i+1},hMainGui.Measure(i).Mean); %#ok<AGROW>
-        end
-        if get(hMainGui.RightPanel.pTools.cSTD,'Value')==1
-             str{i+1}=sprintf('%s%f\t',str{i+1},hMainGui.Measure(i).STD);%#ok<AGROW>
-        end
     end
-    f=fopen(file,'w');
-    for i=1:length(str)
-        fprintf(f,'%s\n',str{i});
-    end
-    fclose(f);
 end
 fShared('ReturnFocus');
 
@@ -524,10 +541,15 @@ global KymoTrackMol;
 global KymoTrackFil;
 s=str2double(get(hMainGui.RightPanel.pTools.eKymoStart,'String'));
 e=str2double(get(hMainGui.RightPanel.pTools.eKymoEnd,'String'));
+stepsize = str2double(get(hMainGui.RightPanel.pTools.eKymoStep,'String'));
 if ~isnan(s)&&~isnan(e)&&~isempty(Stack)
     [KymoGraph,KymoPixSize,KymoInfo]=NewKymo(hMainGui.Scan);
     KymoGraph(e+1:end,:,:)=[];
     KymoGraph(1:s-1,:,:)=[];
+    KymoGraph = KymoGraph(1:stepsize:end,:,:);
+    KymoInfo.Time(e+1:end,:)=[];
+    KymoInfo.Time(1:s-1,:)=[];
+    KymoInfo.Time = KymoInfo.Time(1:stepsize:end,:);
     try
         delete(hMainGui.MidPanel.aKymoGraph);
     catch
@@ -588,6 +610,7 @@ function [KymoGraph,KymoPix,KymoInfo] = NewKymo(Scan)
 global Stack;
 global Config;
 global FiestaDir;
+global TimeInfo;
 hMainGui=getappdata(0,'hMainGui');
 Drift=getappdata(hMainGui.fig,'Drift');
 iX=Scan.InterpX;
@@ -599,10 +622,11 @@ if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
     stidx=hMainGui.Values.FrameIdx(1);
     if stidx>length(hMainGui.Values.MaxIdx)-1
         N = hMainGui.Values.MaxIdx(2);
+        tN(stidx) = N;
     else
         N = hMainGui.Values.MaxIdx(stidx+1);
+        tN = hMainGui.Values.MaxIdx(2:end);
     end
-    tN = N;
 else
     stidx=1:numel(Stack);
     N = max(hMainGui.Values.MaxIdx(2:end));
@@ -615,7 +639,8 @@ for k = stidx
 end
 dirStatus = [FiestaDir.AppData 'fiestastatus' filesep];  
 parallelprogressdlg('String','Creating KymoGraph','Max',sum(tN),'Parent',hMainGui.fig,'Directory',FiestaDir.AppData);
-KymoGraph = zeros(N,length(d),length(stidx)); 
+KymoGraph = zeros(N,length(d),length(stidx))*NaN; 
+KymoTime = zeros(N,length(stidx)); 
 if get(hMainGui.RightPanel.pTools.cKymoDrift,'Value')==1 && ~isempty(Drift)
     if get(hMainGui.RightPanel.pTools.mKymoMethod,'Value')==1
         for k = stidx
@@ -631,6 +656,7 @@ if get(hMainGui.RightPanel.pTools.cKymoDrift,'Value')==1 && ~isempty(Drift)
                 NY = iX * T(1,2) + iY * T(2,2) + T(3,2);
                 Z = interp2(double(S(:,:,n)),NX,NY,'nearest');
                 KymoGraph(n,:,k)=max(Z,[],1);
+                KymoTime(n,k) = TimeInfo{k}(n)-TimeInfo{k}(1);
                 fSave(dirStatus,sum(tN(1:k-1))+n);
             end     
         end
@@ -648,6 +674,7 @@ if get(hMainGui.RightPanel.pTools.cKymoDrift,'Value')==1 && ~isempty(Drift)
                 NY = iX * T(1,2) + iY * T(2,2) + T(3,2);
                 Z = interp2(double(S(:,:,n)),NX,NY);
                 KymoGraph(n,:,k)=mean(Z,1);
+                KymoTime(n,k) = TimeInfo{k}(n)-TimeInfo{k}(1);
                 fSave(dirStatus,sum(tN(1:k-1))+n);
             end     
         end
@@ -660,6 +687,7 @@ else
             parfor(n = 1:nS,Config.NumCores)
                 Z = interp2(double(S(:,:,n)),iX,iY,'nearest');
                 KymoGraph(n,:,k)=max(Z,[],1);
+                KymoTime(n,k) = TimeInfo{k}(n)-TimeInfo{k}(1);
                 fSave(dirStatus,sum(tN(1:k-1))+n);
             end     
         end
@@ -670,6 +698,7 @@ else
             parfor(n = 1:nS,Config.NumCores)
                 Z = interp2(double(S(:,:,n)),iX,iY);
                 KymoGraph(n,:,k)=mean(Z,1);
+                KymoTime(n,k) = TimeInfo{k}(n)-TimeInfo{k}(1);
                 fSave(dirStatus,sum(tN(1:k-1))+n);
             end     
         end
@@ -677,13 +706,15 @@ else
 end
 parallelprogressdlg('close');
 for n = stidx
-    k = find(max(KymoGraph(:,:,n),[],2)==0,1,'first');
+    k = find(any(isnan(KymoGraph(:,:,n)),2),1,'first');
     if ~isempty(k)
         KymoGraph(k:N,:,n) = repmat(KymoGraph(k-1,:,n),N-k+1,1);
+        KymoTime(k:N,n) = repmat(KymoTime(k-1,n),N-k+1,1);
     end
 end
 KymoGraph = KymoGraph(:,:,stidx);
-KymoInfo = stidx;
+KymoInfo.FrameIdx = stidx;
+KymoInfo.Time = KymoTime/1000;
 
 function UpdateKymoTracks(hMainGui)
 global Molecule;
@@ -771,9 +802,9 @@ ux = iX(end,:);
 ly = iY(1,:);
 uy = iY(end,:);
 delete(findobj('Tag','plotScan'));
-line(hMainGui.MidPanel.aView,X,Y,'Color','red','LineStyle','-.','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan);
-line(hMainGui.MidPanel.aView,lx,ly,'Color','red','LineStyle',':','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan);
-line(hMainGui.MidPanel.aView,ux,uy,'Color','red','LineStyle',':','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan);
+line(hMainGui.MidPanel.aView,X,Y,'Color','red','LineStyle','-.','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan,'LineWidth',2);
+line(hMainGui.MidPanel.aView,lx,ly,'Color','red','LineStyle',':','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan,'LineWidth',2);
+line(hMainGui.MidPanel.aView,ux,uy,'Color','red','LineStyle',':','Tag','plotScan','UIContextMenu',hMainGui.Menu.ctScan,'LineWidth',2);
 hMainGui.Scan.InterpX=iX;
 hMainGui.Scan.InterpY=iY;
 hMainGui.Scan.lx=lx;
@@ -807,6 +838,13 @@ if ~isempty(plotScan)
     KymoTrackFil(:)=[];
     delete(plotScan);
     delete(findobj('Tag','plotLineScan'));
+    mObj = findobj('Parent',hMainGui.MidPanel.aKymoGraph,'-and','Tag','plotMeasure');
+    for n = numel(mObj):-1:1
+        hMainGui.Measure(n) = [];
+        delete(hMainGui.Plots.Measure(n));
+        hMainGui.Plots.Measure(n) = [];
+    end
+    setappdata(0,'hMainGui',hMainGui);   
     cla(hMainGui.MidPanel.aKymoGraph,'reset');
     cla(hMainGui.RightPanel.pTools.aLineScan,'reset');
     set(hMainGui.RightPanel.pTools.bLineScanExport,'Enable','off');
@@ -899,52 +937,92 @@ end
     
 
 function UpdateMeasure(hMainGui)
-str{1}='';
-sprintf('Length/Area   Integral  Mean  STD');
-if get(hMainGui.RightPanel.pTools.cLengthArea,'Value')==1
-     str{1}=[str{1} 'Length/Area   '];
-end
-if get(hMainGui.RightPanel.pTools.cIntegral,'Value')==1
-    str{1}=[str{1} 'Integral     '];
-end
-if get(hMainGui.RightPanel.pTools.cMean,'Value')==1
-    str{1}=[str{1} '    Mean     '];
-end
-if get(hMainGui.RightPanel.pTools.cSTD,'Value')==1
-    str{1}=[str{1} '     STD'];
-end
-for i=1:length(hMainGui.Measure)
-     str{i+1}=''; %#ok<AGROW>
-     if get(hMainGui.RightPanel.pTools.cLengthArea,'Value')==1
-         str{i+1}=[str{i+1} formatstr(7,'%.3f',hMainGui.Measure(i).LenArea)]; %#ok<AGROW>
-         if hMainGui.Measure(i).Dim==1
-             str{i+1}=[str{i+1} char(956) 'm     ']; %#ok<AGROW>
-         else
-             str{i+1}=[str{i+1} char(956) 'm' char(178) '   ']; %#ok<AGROW>
-          end
-     end
-     if get(hMainGui.RightPanel.pTools.cIntegral,'Value')==1
-         if hMainGui.Measure(i).Dim==1
-             str{i+1}=[str{i+1} formatstr(7,'%.0f',hMainGui.Measure(i).Integral) '     ']; %#ok<AGROW>
-         else
-             str{i+1}=[str{i+1} formatstr(7.5,'%.2e',hMainGui.Measure(i).Integral) '     ']; %#ok<AGROW>
-         end
-     end
-     if get(hMainGui.RightPanel.pTools.cMean,'Value')==1
-         str{i+1}=[str{i+1} formatstr(7,'%.1f',hMainGui.Measure(i).Mean) '     ']; %#ok<AGROW>
-     end
-     if get(hMainGui.RightPanel.pTools.cSTD,'Value')==1
-         str{i+1}=[str{i+1} formatstr(7,'%.2f',hMainGui.Measure(i).STD) '     ']; %#ok<AGROW>
-     end
-end
-if isempty(hMainGui.Measure)
-    set(hMainGui.RightPanel.pTools.lMeasureTable,'String','','UIContextMenu','','Value',1);
+set(hMainGui.fig,'Units','pixels');
+ssizetemp = get(hMainGui.fig,'Position');
+set(hMainGui.fig,'Units','normalized');
+ssize = ssizetemp(3);
+ssize = ssize * 0.178;
+big = ceil(0.26*ssize);
+if ~isempty(hMainGui.Measure)
+    Data = [hMainGui.Measure.Data];
+    Data = reshape(Data,4,size(Data,2)/4)';
+    if isempty(Data)
+        set(hMainGui.RightPanel.pTools.lCurrentMeasure,'Data',[],'ColumnName',[],'Enable','off','UIContextMenu','','UserData',{[],[]});
+        set(hMainGui.RightPanel.pTools.bKeep,'Enable','off');
+    else
+        if strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'off')
+            k = find(Data(:,1)./Data(:,2) ~= Data(:,4)); % get all data from kymographs
+            Data = Data(k,:);
+            set(hMainGui.RightPanel.pTools.lCurrentMeasure,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'bank','bank','bank','bank'},...
+                                                         'ColumnWidth',{big,big,big,big},'RowName','','ColumnName',...
+                                                         {['<html><CENTER>Length/Area<br><CENTER>[' char(181) 'm/' char(181) 'm^2]'],...
+                                                           '<html><CENTER>Mean<br><CENTER>',...
+                                                           '<html><CENTER>Integral<br><CENTER>',...
+                                                           '<html><CENTER>STD<br><CENTER>'},...
+                                                           'UIContextMenu',hMainGui.Menu.ctMeasure,'UserData',{k,[]});
+        else
+            k = find(Data(:,1)./Data(:,2) == Data(:,4)); % get all data from kymographs
+            Data = Data(k,:);
+            velunit = char(181);
+            if mean(Data(:,4))<0.1
+                velunit = 'n';
+                Data(:,4) = Data(:,4)*1000;
+            end
+            set(hMainGui.RightPanel.pTools.lCurrentMeasure,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'bank','bank','bank','bank'},...
+                                                         'ColumnWidth',{big,big,big,big},'RowName','','ColumnName',...
+                                                         {['<html><CENTER>Distance<br><CENTER>[' char(181) 'm]'],...
+                                                           '<html><CENTER>Time<br><CENTER>[s]',...
+                                                           '<html><CENTER>Frames<br><CENTER>',...
+                                                          ['<html><CENTER>Velocity<br><CENTER>[' velunit 'm/s]']},...
+                                                          'UIContextMenu',hMainGui.Menu.ctMeasure,'UserData',{k,[]});
+        end
+        set(hMainGui.RightPanel.pTools.bKeep,'Enable','on');
+    end
+    jTable = findjobj(hMainGui.RightPanel.pTools.lCurrentMeasure);
+    jTable.setVerticalScrollBarPolicy(22);
+    jTable.setHorizontalScrollBarPolicy(31);
+    set(hMainGui.fig,'pointer','arrow');
 else
-    set(hMainGui.RightPanel.pTools.lMeasureTable,'String',str,'UIContextMenu',hMainGui.Menu.ctMeasure,'Value',length(str));
+    set(hMainGui.RightPanel.pTools.lCurrentMeasure,'Data',[],'ColumnName',[],'Enable','off','UIContextMenu','','UserData',{[],[]});
+    set(hMainGui.RightPanel.pTools.bKeep,'Enable','off');
+end    
+if ~isempty(hMainGui.Measurements)
+    Data = hMainGui.Measurements;
+    if strcmp(get(hMainGui.ToolBar.ToolKymoGraph,'State'),'off')
+        k = find(Data(:,1)./Data(:,2) ~= Data(:,4)); % get all data from kymographs
+        Data = Data(k,:);
+        set(hMainGui.RightPanel.pTools.lMeasureTable,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'bank','bank','bank','bank'},...
+                                                     'ColumnWidth',{big,big,big,big},'RowName','','ColumnName',...
+                                                     {['<html><CENTER>Length/Area<br><CENTER>[' char(181) 'm/' char(181) 'm^2]'],...
+                                                       '<html><CENTER>Mean<br><CENTER>',...
+                                                       '<html><CENTER>Integral<br><CENTER>',...
+                                                       '<html><CENTER>STD<br><CENTER>'},...
+                                                       'UIContextMenu',hMainGui.Menu.ctMeasure,'UserData',{k,[]});
+    else
+        k = find(Data(:,1)./Data(:,2) == Data(:,4)); % get all data from kymographs
+        Data = Data(k,:);
+        velunit = char(181);
+        if mean(Data(:,4))<0.1
+            velunit = 'n';
+            Data(:,4) = Data(:,4)*1000;
+        end
+        set(hMainGui.RightPanel.pTools.lMeasureTable,'Data',Data(:,1:4),'Enable','on','ColumnFormat',{'bank','bank','bank','bank'},...
+                                                     'ColumnWidth',{big,big,big,big},'RowName','','ColumnName',...
+                                                     {['<html><CENTER>Distance<br><CENTER>[' char(181) 'm]'],...
+                                                       '<html><CENTER>Time<br><CENTER>[s]',...
+                                                       '<html><CENTER>Frames<br><CENTER>',...
+                                                      ['<html><CENTER>Velocity<br><CENTER>[' velunit 'm/s]']},...
+                                                      'UIContextMenu',hMainGui.Menu.ctMeasure,'UserData',{k,[]});
+    end
+    set(hMainGui.RightPanel.pTools.bSave,'Enable','on');
+%    jTable = findjobj(hMainGui.RightPanel.pTools.lMeasureTable);
+%    jTable.setVerticalScrollBarPolicy(22);
+%    jTable.setHorizontalScrollBarPolicy(31);
+else
+    set(hMainGui.RightPanel.pTools.lMeasureTable,'Data',[],'ColumnName',[],'Enable','off','UIContextMenu','','UserData',{[],[]});
+    set(hMainGui.RightPanel.pTools.bSave,'Enable','off');
 end
-set(hMainGui.fig,'pointer','arrow');
-setappdata(0,'hMainGui',hMainGui);
-
+setappdata(0,'hMainGui',hMainGui); 
 
 function SetAllPanelsOff(hMainGui)
 set(hMainGui.RightPanel.pData.panel,'Visible','off');
@@ -1011,7 +1089,14 @@ set(hMainGui.RightPanel.pTools.bSegLineScan,'Value',0);
 set(hMainGui.RightPanel.pTools.bFreehandScan,'Value',0);
 if isfield(hMainGui,'Plots')
     if isfield(hMainGui.Plots,'Measure')
-        nMeasure=length(hMainGui.Plots.Measure);
+        nMeasure=numel(hMainGui.Plots.Measure);
+        for n = nMeasure:-1:1
+            if ~isgraphics(hMainGui.Plots.Measure(n))
+                hMainGui.Plots.Measure(n)=[];
+                hMainGui.Measure(n)=[];
+            end
+        end
+        nMeasure=numel(hMainGui.Plots.Measure);
         if nMeasure>0
             color=get(hMainGui.Plots.Measure(nMeasure),'Color');    
             if sum(color)==3

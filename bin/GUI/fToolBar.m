@@ -85,6 +85,7 @@ if ~isempty(Stack)
     hMainGui.Values.CursorDownPos(:)=0;     
     setappdata(0,'hMainGui',hMainGui);
     fShared('UpdateMenu',hMainGui);
+    fRightPanel('UpdateMeasure',hMainGui);
 else
     set(hMainGui.ToolBar.ToolNormImage,'State','off');
 end
@@ -104,6 +105,7 @@ if ~isempty(Stack)
     hMainGui=DeleteSelectRegion(hMainGui);
     hMainGui.Values.CursorDownPos(:)=0;     
     setappdata(0,'hMainGui',hMainGui);
+    fRightPanel('UpdateMeasure',hMainGui);
 else
     set(hMainGui.ToolBar.ToolThreshImage,'State','off');
 end
@@ -112,11 +114,11 @@ function ToolKymoGraph(hMainGui)
 global Stack;
 if ~isempty(Stack)&&~isempty(hMainGui.KymoImage)
     if strcmp(get(hMainGui.ToolBar.ToolChannels(5),'State'),'off')
-        if length(hMainGui.KymoInfo)>1 || hMainGui.KymoInfo(1) ~= hMainGui.Values.FrameIdx(1)
+        if length(hMainGui.KymoInfo.FrameIdx)>1 || hMainGui.KymoInfo.FrameIdx(1) ~= hMainGui.Values.FrameIdx(1)
             fRightPanel('ShowKymoGraph',hMainGui);
         end
     else
-        if length(hMainGui.KymoInfo)==1
+        if length(hMainGui.KymoInfo.FrameIdx)==1
             fRightPanel('ShowKymoGraph',hMainGui);
         end
     end
@@ -132,6 +134,7 @@ if ~isempty(Stack)&&~isempty(hMainGui.KymoImage)
     hMainGui=DeleteSelectRegion(hMainGui);
     hMainGui.Values.CursorDownPos(:)=0;        
     setappdata(0,'hMainGui',hMainGui);
+    fRightPanel('UpdateMeasure',hMainGui);
 else
     set(hMainGui.ToolBar.ToolKymoGraph,'State','off');
 end

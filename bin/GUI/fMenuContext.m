@@ -276,23 +276,30 @@ end
 function DeleteMeasure(hMainGui)
 fToolBar('Cursor',hMainGui);
 hMainGui=getappdata(0,'hMainGui');
+u = get(gco,'UserData');
 if strcmp(get(gcbo,'UserData'),'one')==1
-    sMeasure=get(gco,'UserData');
-    if sMeasure>0
-        nMeasure=sMeasure;
-        set(hMainGui.RightPanel.pTools.lMeasureTable,'Value',sMeasure,'UserData',sMeasure-1)
+    if numel(u)>1
+        if ~isempty(u{2})
+            idx = u{1}(u{2});
+        end
     else
-        nMeasure=length(hMainGui.Measure);
-        sMeasure=length(hMainGui.Measure)+1;
+        idx = u;
     end
 else
-    sMeasure=1;
-    nMeasure=length(hMainGui.Measure);
+    idx = fliplr(u{1});
 end
-for i=nMeasure:-1:sMeasure
-    hMainGui.Measure(i)=[];
-    delete(hMainGui.Plots.Measure(i));
-    hMainGui.Plots.Measure(i)=[];
+if gco ~= hMainGui.RightPanel.pTools.lMeasureTable 
+    for n = idx
+        hMainGui.Measure(n) = [];
+        delete(hMainGui.Plots.Measure(n));
+        hMainGui.Plots.Measure(n) = [];
+    end
+else
+    if strcmp(get(gcbo,'UserData'),'one')==1
+        hMainGui.Measurements(idx,:) = [];
+    else
+        hMainGui.Measurements(:) = [];
+    end
 end
 setappdata(0,'hMainGui',hMainGui);
 fRightPanel('UpdateMeasure',hMainGui);

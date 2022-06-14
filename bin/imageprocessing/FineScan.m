@@ -54,13 +54,27 @@ function objects = FineScan( objects, params )
   %%----------------------------------------------------------------------------
   %% PLAUSIBILITY CHECK
   %%----------------------------------------------------------------------------
-  
   % determine standard deviation of background
   b = [];
   for i = 1 : numel( objects )
     b = [ b double( [ objects(i).p.b ] ) ];
   end
-  height_thresh = params.height_threshold * std( b );
+  height_thresh = params.height_threshold * std( b( ~isoutlier(b) ) );
+  % alternative: determine standard deviation of background
+  
+  if isfield( params, 'bw_region' )
+    Isort = sort( pic(params.bw_region==1) );
+  else
+    Isort = sort( pic(:) );
+  end
+  z = numel(Isort);
+  med = Isort(round(z/2));
+  if med-Isort(round(z/4))>10
+    sqr = 2*0.7413*(Isort(round(z/2))-Isort(round(z/4)));
+  else
+    sqr = std(Isort(~isoutlier(Isort)));
+  end
+  height_thresh = params.height_threshold * sqr;
   
   % delete very dark objects
   i = 1;

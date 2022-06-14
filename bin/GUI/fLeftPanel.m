@@ -240,7 +240,7 @@ for n=1:3
     set(findobj('Parent',hMainGui.LeftPanel.(sprintf('p%sNorm',sPanels{n})).panel,'-and','Style','edit'),'Enable','off');
     set(findobj('Parent',hMainGui.LeftPanel.(sprintf('p%sThresh',sPanels{n})).panel,'-and','Style','edit'),'Enable','off');    
     set(findobj('Parent',hMainGui.LeftPanel.(sprintf('p%sNorm',sPanels{n})).panel,'-and','Type','slider'),'Enable','off');
-    set(findobj('Parent',hMainGui.LeftPanel.(sprintf('p%sThresh',sPanels{n})).panel,'-and','Style','slider'),'Enable','off');    
+%    set(findobj('Parent',hMainGui.LeftPanel.(sprintf('p%sThresh',sPanels{n})).panel,'-and','Style','slider'),'Enable','off');    
     cla(hMainGui.LeftPanel.(sprintf('p%sNorm',sPanels{n})).aScaleBar);
     cla(hMainGui.LeftPanel.(sprintf('p%sThresh',sPanels{n})).aScaleBar);        
 end
